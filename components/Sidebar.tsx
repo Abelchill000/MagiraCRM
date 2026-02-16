@@ -32,9 +32,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
   return (
     <aside 
       className={`
-        fixed inset-y-0 left-0 z-30 transition-all duration-300 transform bg-emerald-900 text-white flex flex-col h-screen shadow-2xl
-        md:relative md:translate-x-0
-        ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0 md:w-20'}
+        fixed inset-y-0 right-0 z-50 transition-all duration-300 transform bg-slate-900 text-white flex flex-col h-screen shadow-2xl
+        md:relative md:inset-auto md:translate-x-0 md:bg-emerald-900
+        ${isOpen ? 'translate-x-0 w-64' : 'translate-x-full md:translate-x-0 md:w-20'}
       `}
     >
       <div className={`p-6 flex items-center justify-between`}>
@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
         </h2>
         {/* Close button for mobile only */}
         <button 
-          className="md:hidden text-emerald-300 hover:text-white"
+          className="md:hidden text-slate-400 hover:text-white p-2"
           onClick={() => setIsOpen(false)}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
             className={`w-full flex items-center rounded-xl transition-all duration-200 group relative ${
               activeTab === item.id 
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/20' 
-                : 'text-emerald-100 hover:bg-emerald-800/50'
+                : 'text-slate-400 md:text-emerald-100 hover:bg-slate-800 md:hover:bg-emerald-800/50'
             } ${isOpen ? 'px-4 py-3 space-x-3' : 'px-0 py-3 justify-center'}`}
           >
             <span className={`text-xl transition-transform duration-200 group-hover:scale-110 ${!isOpen ? 'mx-auto' : ''}`}>
@@ -80,8 +80,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
         ))}
       </nav>
 
-      <div className={`p-4 border-t border-emerald-800/50 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 p-0 overflow-hidden'}`}>
-        <p className="text-[10px] text-emerald-300 uppercase tracking-widest font-black text-center">
+      <div className={`p-4 border-t border-slate-800 md:border-emerald-800/50 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 p-0 overflow-hidden'}`}>
+        <p className="text-[10px] text-slate-500 md:text-emerald-300 uppercase tracking-widest font-black text-center">
           Premium Distribution
         </p>
       </div>

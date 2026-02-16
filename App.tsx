@@ -20,7 +20,7 @@ import Navbar from './components/Navbar.tsx';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(db.getCurrentUser());
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   // Auto-close sidebar on mobile when tab changes
   useEffect(() => {
@@ -91,12 +91,18 @@ const App: React.FC = () => {
     }
   };
 
+  const mobileQuickActions = [
+    { id: 'leads', icon: '⚡', label: 'Leads' },
+    { id: 'orders', icon: '🛒', label: 'Orders' },
+    { id: 'logistics', icon: '🚚', label: 'Logistics' },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-hidden">
       {/* Mobile Overlay Backdrop */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-20 md:hidden" 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -109,18 +115,42 @@ const App: React.FC = () => {
         userRole={user.role}
       />
       
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
         <Navbar 
           user={user} 
           onLogout={handleLogout} 
           onRoleSwitch={handleRoleSwitch}
           toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} 
         />
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden">
+        
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden pb-24 md:pb-8">
           <div className="max-w-7xl mx-auto">
             {renderContent()}
           </div>
         </main>
+
+        {/* Mobile Quick Actions Dock */}
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 w-full max-w-sm">
+          <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 p-2 flex items-center justify-around">
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'dashboard' ? 'text-emerald-400' : 'text-slate-400'}`}
+            >
+              <span className="text-lg">📊</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">Home</span>
+            </button>
+            {mobileQuickActions.map(action => (
+              <button 
+                key={action.id}
+                onClick={() => setActiveTab(action.id)}
+                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === action.id ? 'text-emerald-400' : 'text-slate-400'}`}
+              >
+                <span className="text-lg">{action.icon}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
