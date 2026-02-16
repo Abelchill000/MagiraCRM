@@ -1,4 +1,3 @@
-
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
   PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
@@ -63,7 +62,6 @@ class MockDb {
 
   constructor() {
     this.data = this.load();
-    this.migrate();
     
     // Listen for storage changes in other tabs to keep data in sync
     window.addEventListener('storage', (e) => {
@@ -85,30 +83,48 @@ class MockDb {
 
   private load(): AppData {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const data = saved ? JSON.parse(saved) : INITIAL_DATA;
-    if (!data.users) data.users = INITIAL_DATA.users;
-    return data;
-  }
+    let data: AppData;
+    
+    if (saved) {
+      try {
+        data = JSON.parse(saved);
+      } catch (e) {
+        data = JSON.parse(JSON.stringify(INITIAL_DATA));
+      }
+    } else {
+      data = JSON.parse(JSON.stringify(INITIAL_DATA));
+    }
 
-  private save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-    this.notify();
-  }
-
-  private migrate() {
+    // Migration and Integrity Checks (runs on every load)
+    if (!data.users) data.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
+    
     let changed = false;
-    if (!this.data.users.find(u => u.email === 'admin@magiracrm.store')) {
-       this.data.users.push(INITIAL_DATA.users[0]);
+    // Ensure admin exists
+    if (!data.users.find(u => u.email === 'admin@magiracrm.store')) {
+       data.users.push(INITIAL_DATA.users[0]);
        changed = true;
     }
-    this.data.users = this.data.users.map(u => {
+
+    // Ensure all users have a status field
+    data.users = data.users.map(u => {
       if (!u.status) {
         u.status = u.isApproved ? 'approved' : 'pending';
         changed = true;
       }
       return u;
     });
-    if (changed) this.save();
+
+    if (changed) {
+      // Don't call this.save() here as it would trigger infinite loops if called during constructor sync
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    return data;
+  }
+
+  private save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+    this.notify();
   }
 
   private sync() {

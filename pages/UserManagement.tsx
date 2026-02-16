@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb.ts';
 import { User } from '../types.ts';
@@ -8,8 +7,9 @@ const UserManagement: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   const refreshData = () => {
-    setUsers([...db.getUsers()]);
-    setLastUpdated(new Date());
+    const freshUsers = db.getUsers();
+    setUsers([...freshUsers]);
+    setLastUpdated(freshUsers.length > 0 ? new Date() : lastUpdated);
   };
 
   useEffect(() => {
@@ -22,7 +22,7 @@ const UserManagement: React.FC = () => {
     });
 
     // Fallback interval
-    const interval = setInterval(refreshData, 15000);
+    const interval = setInterval(refreshData, 10000);
     
     return () => {
       unsubscribe();
@@ -33,6 +33,7 @@ const UserManagement: React.FC = () => {
   const pendingUsers = users.filter(u => u.status === 'pending');
   const activeUsers = users.filter(u => u.status === 'approved');
   const rejectedUsers = users.filter(u => u.status === 'rejected');
+  const unclassifiedUsers = users.filter(u => !['pending', 'approved', 'rejected'].includes(u.status));
 
   const handleApprove = (id: string) => {
     db.approveUser(id);
@@ -45,12 +46,11 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    // Cleaned up JSX formatting to resolve potential parsing errors causing "Cannot find name 'div'"
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800">Access Control</h1>
-          <p className="text-slate-500 text-sm">Review applications and manage the distribution team.</p>
+          <p className="text-slate-500 text-sm">Review applications and manage the distribution team. ({users.length} total records found)</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
@@ -117,6 +117,21 @@ const UserManagement: React.FC = () => {
           </div>
         </section>
 
+        {/* Unclassified/Error Users fallback */}
+        {unclassifiedUsers.length > 0 && (
+          <section className="bg-red-50 border border-red-100 p-4 rounded-2xl">
+             <h2 className="text-[10px] font-black text-red-700 uppercase mb-2">Integrity Alert: {unclassifiedUsers.length} Users with Invalid Status</h2>
+             <div className="space-y-1">
+                {unclassifiedUsers.map(u => (
+                  <div key={u.id} className="flex justify-between items-center text-xs">
+                    <span className="font-bold">{u.email}</span>
+                    <button onClick={() => handleApprove(u.id)} className="text-emerald-600 underline">Set to Approved</button>
+                  </div>
+                ))}
+             </div>
+          </section>
+        )}
+
         {/* Team Directory */}
         <section>
           <div className="flex items-center gap-2 mb-4">
@@ -141,7 +156,9 @@ const UserManagement: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    [...activeUsers, ...rejectedUsers].sort((a,b) => b.registeredAt.localeCompare(a.registeredAt)).map(u => (
+                    [...activeUsers, ...rejectedUsers]
+                      .sort((a,b) => (b.registeredAt || '').localeCompare(a.registeredAt || ''))
+                      .map(u => (
                       <tr key={u.id} className="hover:bg-slate-50/50 transition">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
