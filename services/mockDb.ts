@@ -3,7 +3,7 @@ import {
   PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
 } from '../types';
 
-const STORAGE_KEY = 'magira_crm_data_v3'; // Version bump for data integrity fix
+const STORAGE_KEY = 'magira_crm_data_v3'; 
 
 interface AppData {
   products: Product[];
@@ -62,8 +62,6 @@ class MockDb {
 
   constructor() {
     this.data = this.load();
-    
-    // Listen for storage changes in other tabs
     window.addEventListener('storage', (e) => {
       if (e.key === STORAGE_KEY) {
         this.data = this.load();
@@ -95,14 +93,11 @@ class MockDb {
       parsed = JSON.parse(JSON.stringify(INITIAL_DATA));
     }
 
-    // Integrity checks
     if (!parsed.users || !Array.isArray(parsed.users)) {
       parsed.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
     }
     
     let changed = false;
-    
-    // Ensure admin is always present and approved
     const adminIdx = parsed.users.findIndex((u: User) => u.email === 'admin@magiracrm.store');
     if (adminIdx === -1) {
       parsed.users.push(INITIAL_DATA.users[0]);
@@ -115,7 +110,6 @@ class MockDb {
       }
     }
 
-    // Fix status mapping for all users
     parsed.users = parsed.users.map((u: any) => {
       if (!u.status) {
         u.status = u.isApproved ? 'approved' : 'pending';
@@ -132,8 +126,14 @@ class MockDb {
   }
 
   private save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-    this.notify();
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+      this.notify();
+      return true;
+    } catch (e) {
+      console.error("Storage Save Failed", e);
+      return false;
+    }
   }
 
   private sync() {
@@ -142,11 +142,7 @@ class MockDb {
 
   // --- AUTH ---
   getCurrentUser() { return this.data.currentUser; }
-  
-  getUsers() { 
-    this.sync();
-    return this.data.users; 
-  }
+  getUsers() { this.sync(); return this.data.users; }
 
   register(name: string, email: string, password: string, role: UserRole) {
     this.sync();
@@ -167,8 +163,20 @@ class MockDb {
     };
 
     this.data.users.push(newUser);
-    this.save();
-    console.log('User registered in DB:', newUser.email, newUser.status);
+    
+    // Critical Save and Verify logic
+    const success = this.save();
+    if (!success) {
+      throw new Error('Registration Failed: Your browser refused to save the data. Please disable Incognito/Private mode or clear browser cache.');
+    }
+
+    // Immediate Verification Check
+    const verification = localStorage.getItem(STORAGE_KEY);
+    if (!verification || !verification.includes(cleanEmail)) {
+      throw new Error('Registration Failed: Critical Data Sync Error. The application was unable to verify your record in system storage.');
+    }
+
+    console.log('User registered & verified:', cleanEmail);
     return newUser;
   }
 

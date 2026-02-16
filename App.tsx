@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { db } from './services/mockDb.ts';
 import { User, UserRole } from './types.ts';
@@ -24,6 +23,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup' | 'pending'>('login');
   const [authError, setAuthError] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [signUpData, setSignUpData] = useState({ name: '', email: '', password: '' });
@@ -51,12 +51,19 @@ const App: React.FC = () => {
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    try {
-      db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
-      setAuthView('pending');
-    } catch (err: any) {
-      setAuthError(err.message);
-    }
+    setIsRegistering(true);
+    
+    // Slight delay to allow UI feedback
+    setTimeout(() => {
+      try {
+        db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
+        setAuthView('pending');
+      } catch (err: any) {
+        setAuthError(err.message || 'Registration encountered an unexpected error.');
+      } finally {
+        setIsRegistering(false);
+      }
+    }, 800);
   };
 
   const handleLogout = () => {
@@ -88,7 +95,7 @@ const App: React.FC = () => {
 
           {authView === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
-              {authError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold text-center border border-red-100">{authError}</div>}
+              {authError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold text-center border border-red-100 animate-pulse">{authError}</div>}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email Address</label>
                 <input 
@@ -113,7 +120,7 @@ const App: React.FC = () => {
                 Enter Dashboard
               </button>
               <div className="text-center pt-4">
-                <button type="button" onClick={() => setAuthView('signup')} className="text-xs font-bold text-emerald-600 hover:underline">
+                <button type="button" onClick={() => { setAuthError(''); setAuthView('signup'); }} className="text-xs font-bold text-emerald-600 hover:underline">
                   Don't have an account? Sign Up as Agent
                 </button>
               </div>
@@ -122,7 +129,12 @@ const App: React.FC = () => {
 
           {authView === 'signup' && (
             <form onSubmit={handleSignUp} className="space-y-4">
-              {authError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold text-center border border-red-100">{authError}</div>}
+              {authError && (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
+                  <p className="text-xs font-black text-red-600 uppercase tracking-tight mb-1 text-center">Registration Failed</p>
+                  <p className="text-[10px] text-red-500 text-center leading-relaxed">{authError}</p>
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
@@ -149,11 +161,22 @@ const App: React.FC = () => {
                   />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg transition mt-4">
-                Register for Approval
+              <button 
+                type="submit" 
+                disabled={isRegistering}
+                className={`w-full text-white font-black py-4 rounded-xl shadow-lg transition mt-4 flex items-center justify-center gap-2 ${isRegistering ? 'bg-slate-400' : 'bg-slate-900 hover:bg-black'}`}
+              >
+                {isRegistering ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    Registering...
+                  </>
+                ) : (
+                  'Register for Approval'
+                )}
               </button>
               <div className="text-center pt-4">
-                <button type="button" onClick={() => setAuthView('login')} className="text-xs font-bold text-slate-400 hover:text-slate-600">
+                <button type="button" onClick={() => { setAuthError(''); setAuthView('login'); }} className="text-xs font-bold text-slate-400 hover:text-slate-600">
                   Already have an account? Log In
                 </button>
               </div>
@@ -163,12 +186,12 @@ const App: React.FC = () => {
           {authView === 'pending' && (
             <div className="text-center py-6 animate-in slide-in-from-bottom-4">
               <div className="text-6xl mb-6">⏳</div>
-              <h2 className="text-2xl font-black text-slate-800">Pending Approval</h2>
+              <h2 className="text-2xl font-black text-slate-800">Success! Application Pending</h2>
               <p className="text-slate-500 text-sm mt-4 px-4 leading-relaxed">
-                Your application has been received. Our administrators will review your profile shortly. Please check back later.
+                Your application has been successfully logged into our systems. An administrator will review your profile shortly.
               </p>
               <button onClick={() => setAuthView('login')} className="mt-8 text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-6 py-3 rounded-full">
-                Back to Login
+                Return to Login
               </button>
             </div>
           )}
