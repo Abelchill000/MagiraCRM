@@ -1,10 +1,22 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb.ts';
 import { User } from '../types.ts';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>(db.getUsers());
+
+  const refreshData = () => {
+    setUsers([...db.getUsers()]);
+  };
+
+  useEffect(() => {
+    refreshData();
+    
+    // Auto-refresh every 10 seconds while on this page
+    const interval = setInterval(refreshData, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const pendingUsers = users.filter(u => u.status === 'pending');
   const activeUsers = users.filter(u => u.status === 'approved');
@@ -12,45 +24,54 @@ const UserManagement: React.FC = () => {
 
   const handleApprove = (id: string) => {
     db.approveUser(id);
-    setUsers([...db.getUsers()]);
+    refreshData();
   };
 
   const handleReject = (id: string) => {
     if (window.confirm("Are you sure you want to deny access to this user?")) {
       db.rejectUser(id);
-      setUsers([...db.getUsers()]);
+      refreshData();
     }
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-black text-slate-800">Access Control</h1>
-        <p className="text-slate-500 text-sm">Manage pending agent registrations and active users.</p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800">Access Control</h1>
+          <p className="text-slate-500 text-sm">Manage pending agent registrations and active users.</p>
+        </div>
+        <button 
+          onClick={refreshData}
+          className="bg-white border border-slate-200 text-slate-500 p-2 rounded-xl hover:bg-slate-50 transition flex items-center gap-2 text-xs font-bold"
+        >
+          <span>🔄</span> Refresh List
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
         {/* Pending Requests */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+            <span className={`w-2.5 h-2.5 rounded-full ${pendingUsers.length > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}></span>
             <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest">Pending Approvals ({pendingUsers.length})</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {pendingUsers.length === 0 ? (
               <div className="col-span-full p-12 bg-white rounded-3xl border-2 border-dashed border-slate-100 text-center text-slate-400">
                 <p className="text-xs font-bold uppercase tracking-widest">No pending applications</p>
+                <p className="text-[10px] mt-2">New registrations will appear here automatically.</p>
               </div>
             ) : (
               pendingUsers.map(u => (
-                <div key={u.id} className="bg-white p-6 rounded-3xl shadow-sm border border-amber-100 flex flex-col justify-between hover:shadow-md transition">
+                <div key={u.id} className="bg-white p-6 rounded-3xl shadow-sm border border-amber-100 flex flex-col justify-between hover:shadow-md transition animate-in slide-in-from-bottom-2">
                   <div className="mb-4">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-black">
-                        {u.name.charAt(0)}
+                        {u.name ? u.name.charAt(0) : '?'}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-800 leading-none">{u.name}</p>
+                        <p className="font-bold text-slate-800 leading-none">{u.name || 'Unknown'}</p>
                         <p className="text-xs text-slate-400 mt-1">{u.email}</p>
                       </div>
                     </div>
@@ -96,36 +117,50 @@ const UserManagement: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {[...activeUsers, ...rejectedUsers].map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50/50 transition">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white ${u.status === 'approved' ? 'bg-emerald-500' : 'bg-slate-400'}`}>
-                            {u.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-800">{u.name}</p>
-                            <p className="text-[10px] text-slate-400">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase tracking-tighter">{u.role}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest ${u.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                          {u.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                         {u.status === 'rejected' ? (
-                           <button onClick={() => handleApprove(u.id)} className="text-[10px] font-bold text-emerald-600 hover:underline">Re-approve</button>
-                         ) : (
-                           <button onClick={() => handleReject(u.id)} className="text-[10px] font-bold text-red-500 hover:underline">Revoke Access</button>
-                         )}
+                  {[...activeUsers, ...rejectedUsers].length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-slate-400 text-xs italic">
+                        No team members registered yet.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    [...activeUsers, ...rejectedUsers].map(u => (
+                      <tr key={u.id} className="hover:bg-slate-50/50 transition">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white ${u.status === 'approved' ? 'bg-emerald-500' : 'bg-slate-400'}`}>
+                              {u.name ? u.name.charAt(0) : '?'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">{u.name || 'Unknown'}</p>
+                              <p className="text-[10px] text-slate-400">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase tracking-tighter">{u.role}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest ${u.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                           {u.status === 'rejected' ? (
+                             <button onClick={() => handleApprove(u.id)} className="text-[10px] font-bold text-emerald-600 hover:underline">Re-approve</button>
+                           ) : (
+                             <button 
+                               onClick={() => handleReject(u.id)} 
+                               disabled={u.email === 'admin@magiracrm.store'}
+                               className={`text-[10px] font-bold text-red-500 hover:underline ${u.email === 'admin@magiracrm.store' ? 'opacity-0 pointer-events-none' : ''}`}
+                             >
+                               Revoke Access
+                             </button>
+                           )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

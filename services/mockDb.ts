@@ -59,27 +59,64 @@ class MockDb {
   private data: AppData;
 
   constructor() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    this.data = saved ? JSON.parse(saved) : INITIAL_DATA;
-    if (!this.data.users) this.data.users = INITIAL_DATA.users;
+    this.data = this.load();
+    this.migrate();
     
-    // Migration: ensure initial admin exists if storage was empty or old
-    if (!this.data.users.find(u => u.email === 'admin@magiracrm.store')) {
-       this.data.users.push(INITIAL_DATA.users[0]);
-       this.save();
-    }
+    // Listen for storage changes in other tabs to keep data in sync
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY) {
+        this.data = this.load();
+      }
+    });
+  }
+
+  private load(): AppData {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const data = saved ? JSON.parse(saved) : INITIAL_DATA;
+    if (!data.users) data.users = INITIAL_DATA.users;
+    return data;
   }
 
   private save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
   }
 
+  private migrate() {
+    let changed = false;
+    
+    // Ensure initial admin exists
+    if (!this.data.users.find(u => u.email === 'admin@magiracrm.store')) {
+       this.data.users.push(INITIAL_DATA.users[0]);
+       changed = true;
+    }
+
+    // Ensure all users have status and isApproved (integrity check)
+    this.data.users = this.data.users.map(u => {
+      if (!u.status) {
+        u.status = u.isApproved ? 'approved' : 'pending';
+        changed = true;
+      }
+      return u;
+    });
+
+    if (changed) this.save();
+  }
+
+  // Refresh data before read-only operations to ensure latest from other tabs
+  private sync() {
+    this.data = this.load();
+  }
+
   // Auth
   getCurrentUser() { return this.data.currentUser; }
   
-  getUsers() { return this.data.users; }
+  getUsers() { 
+    this.sync();
+    return this.data.users; 
+  }
 
   register(name: string, email: string, password: string, role: UserRole) {
+    this.sync();
     if (this.data.users.find(u => u.email === email)) {
       throw new Error('Email already registered');
     }
@@ -89,7 +126,7 @@ class MockDb {
       email,
       password,
       role,
-      isApproved: role === UserRole.ADMIN, // Admin auto-approved for demo purposes
+      isApproved: role === UserRole.ADMIN,
       status: role === UserRole.ADMIN ? 'approved' : 'pending',
       registeredAt: new Date().toISOString()
     };
@@ -99,10 +136,10 @@ class MockDb {
   }
 
   login(email: string, password?: string) {
+    this.sync();
     const user = this.data.users.find(u => u.email === email);
     if (!user) throw new Error('User not found');
     
-    // Password check (if password exists in DB)
     if (user.password && password !== user.password) {
       throw new Error('Invalid password');
     }
@@ -116,6 +153,7 @@ class MockDb {
   }
 
   approveUser(userId: string) {
+    this.sync();
     const user = this.data.users.find(u => u.id === userId);
     if (user) {
       user.isApproved = true;
@@ -125,6 +163,7 @@ class MockDb {
   }
 
   rejectUser(userId: string) {
+    this.sync();
     const user = this.data.users.find(u => u.id === userId);
     if (user) {
       user.isApproved = false;
@@ -148,21 +187,24 @@ class MockDb {
   }
 
   // Products
-  getProducts() { return this.data.products; }
+  getProducts() { this.sync(); return this.data.products; }
   saveProduct(product: Product) {
+    this.sync();
     const idx = this.data.products.findIndex(p => p.id === product.id);
     if (idx >= 0) this.data.products[idx] = product;
     else this.data.products.push(product);
     this.save();
   }
   deleteProduct(id: string) {
+    this.sync();
     this.data.products = this.data.products.filter(p => p.id !== id);
     this.save();
   }
 
   // States
-  getStates() { return this.data.states; }
+  getStates() { this.sync(); return this.data.states; }
   saveState(state: State) {
+    this.sync();
     const idx = this.data.states.findIndex(s => s.id === state.id);
     if (idx >= 0) this.data.states[idx] = state;
     else this.data.states.push(state);
@@ -170,8 +212,9 @@ class MockDb {
   }
 
   // Logistics
-  getLogistics() { return this.data.logistics; }
+  getLogistics() { this.sync(); return this.data.logistics; }
   saveLogistics(partner: LogisticsPartner) {
+    this.sync();
     const idx = this.data.logistics.findIndex(l => l.id === partner.id);
     if (idx >= 0) this.data.logistics[idx] = partner;
     else this.data.logistics.push(partner);
@@ -179,12 +222,14 @@ class MockDb {
   }
 
   // Orders
-  getOrders() { return this.data.orders; }
+  getOrders() { this.sync(); return this.data.orders; }
   createOrder(order: Order) {
+    this.sync();
     this.data.orders.push(order);
     this.save();
   }
   updateOrderStatus(orderId: string, status: DeliveryStatus, extra?: { logisticsCost?: number, rescheduleDate?: string, rescheduleNotes?: string, reminderEnabled?: boolean }) {
+    this.sync();
     const order = this.data.orders.find(o => o.id === orderId);
     if (!order) return;
 
@@ -215,8 +260,9 @@ class MockDb {
   }
 
   // Form Builder
-  getForms() { return this.data.forms; }
+  getForms() { this.sync(); return this.data.forms; }
   saveForm(form: OrderForm) {
+    this.sync();
     const idx = this.data.forms.findIndex(f => f.id === form.id);
     if (idx >= 0) this.data.forms[idx] = form;
     else this.data.forms.push(form);
@@ -224,12 +270,14 @@ class MockDb {
   }
 
   // Web Leads
-  getLeads() { return this.data.leads; }
+  getLeads() { this.sync(); return this.data.leads; }
   createLead(lead: WebLead) {
+    this.sync();
     this.data.leads.push(lead);
     this.save();
   }
   updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
+    this.sync();
     const lead = this.data.leads.find(l => l.id === leadId);
     if (lead) {
       lead.status = status;
@@ -239,6 +287,7 @@ class MockDb {
   }
 
   transferStock(productId: string, stateId: string, quantity: number) {
+    this.sync();
     const product = this.data.products.find(p => p.id === productId);
     if (product && product.totalStock >= quantity) {
       product.totalStock -= quantity;
@@ -250,6 +299,7 @@ class MockDb {
   }
 
   restockStateHub(productId: string, stateId: string, quantity: number) {
+    this.sync();
     const product = this.data.products.find(p => p.id === productId);
     if (product) {
       product.stockPerState[stateId] = (product.stockPerState[stateId] || 0) + quantity;
