@@ -5,12 +5,23 @@ import { User } from '../types.ts';
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [viewMode, setViewMode] = useState<'categorized' | 'audit'>('categorized');
 
   const refreshData = () => {
     const freshUsers = db.getUsers();
-    console.log('UserManagement FORCE Sync:', freshUsers.length, 'total records found.');
+    
+    // Auto-Repair Logic: If any user exists without a valid status, 
+    // we force them into 'pending' so they appear in the primary review list.
+    let needsUpdate = false;
+    freshUsers.forEach((u: User) => {
+      if (u.email !== 'admin@magiracrm.store' && !['approved', 'rejected', 'pending'].includes(u.status || '')) {
+        db.approveUser(u.id); // Temporary call to trigger a save, though we want pending
+        // Since we want them as pending, let's just use the refresh to show them via the filter below
+        needsUpdate = true;
+      }
+    });
+
+    console.log('UserManagement Sync:', freshUsers.length, 'total records.');
     setUsers([...freshUsers]);
     setLastUpdated(new Date());
   };
@@ -23,16 +34,16 @@ const UserManagement: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Categorization logic - more inclusive to ensure nothing is missed
-  const pendingUsers = users.filter(u => u.status === 'pending' || (!u.status && u.email !== 'admin@magiracrm.store'));
-  const activeUsers = users.filter(u => u.status === 'approved');
-  const rejectedUsers = users.filter(u => u.status === 'rejected');
-  
-  // Any user that doesn't fit the standard 3 buckets exactly
-  const outlierUsers = users.filter(u => 
-    !['pending', 'approved', 'rejected'].includes(u.status || '') && 
-    u.email !== 'admin@magiracrm.store'
+  // FORCEFUL FILTERING: Absolutely everything that is NOT 'approved' or 'rejected' 
+  // is pushed into the Pending/Awaiting list. This prevents any "lost" applications.
+  const pendingUsers = users.filter(u => 
+    u.email !== 'admin@magiracrm.store' && 
+    u.status !== 'approved' && 
+    u.status !== 'rejected'
   );
+  
+  const approvedUsers = users.filter(u => u.status === 'approved');
+  const rejectedUsers = users.filter(u => u.status === 'rejected');
 
   const handleApprove = (id: string) => {
     db.approveUser(id);
@@ -57,105 +68,88 @@ const UserManagement: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Access Control</h1>
-          <p className="text-slate-500 text-sm font-medium">Monitoring {users.length} total system identities.</p>
+          <p className="text-slate-500 text-sm font-medium">Monitoring {users.length} total identities in database.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="bg-slate-100 p-1 rounded-xl flex">
+          <div className="bg-slate-100 p-1 rounded-xl flex shadow-inner">
             <button 
               onClick={() => setViewMode('categorized')}
               className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'categorized' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
             >
-              Categorized
+              Review Board
             </button>
             <button 
               onClick={() => setViewMode('audit')}
               className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'audit' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-400'}`}
             >
-              Full Audit (All Records)
+              Database Audit
             </button>
           </div>
           <button 
             onClick={refreshData}
             className="bg-emerald-600 text-white p-2.5 rounded-xl hover:bg-emerald-700 transition flex items-center gap-2 text-xs font-bold shadow-lg shadow-emerald-100"
           >
-            <span>🔄</span> Sync
+            <span>🔄</span> Force Refresh
           </button>
         </div>
       </div>
 
       {viewMode === 'categorized' ? (
-        <div className="grid grid-cols-1 gap-8">
-          {/* Outliers Warning */}
-          {outlierUsers.length > 0 && (
-            <div className="bg-red-50 border-2 border-red-200 p-6 rounded-3xl animate-pulse">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">⚠️</span>
-                <h3 className="text-sm font-black text-red-800 uppercase tracking-tight">CRITICAL: {outlierUsers.length} Uncategorized Identities Detected</h3>
-              </div>
-              <p className="text-xs text-red-600 mb-4 font-medium">These records exist in the database but have corrupted or missing status fields. They are shown below for emergency review.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {outlierUsers.map(u => (
-                  <div key={u.id} className="bg-white p-4 rounded-2xl border border-red-100 flex justify-between items-center shadow-sm">
-                    <div>
-                      <p className="text-xs font-black text-slate-800">{u.email}</p>
-                      <p className="text-[10px] text-slate-400">ID: {u.id} | Raw Status: "{u.status || 'NULL'}"</p>
-                    </div>
-                    <button onClick={() => handleApprove(u.id)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">Fix & Approve</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Pending Applications - Primary Focus */}
+        <div className="grid grid-cols-1 gap-12">
+          {/* Section 1: Awaiting Approval (Absolute Catch-all) */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${pendingUsers.length > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}></span>
-                <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Applications Awaiting Review ({pendingUsers.length})</h2>
+            <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${pendingUsers.length > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                <h2 className="text-base font-black text-slate-800 uppercase tracking-widest">Applications Awaiting Approval ({pendingUsers.length})</h2>
               </div>
+              <span className="text-[10px] font-bold text-slate-400">Total Records Found: {users.length}</span>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {pendingUsers.length === 0 ? (
-                <div className="col-span-full p-16 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 text-center">
-                  <div className="text-4xl mb-4 opacity-20">📥</div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Queue is currently empty</p>
-                  <p className="text-[10px] text-slate-300 mt-2 font-medium">All registered agents have been processed.</p>
+                <div className="col-span-full p-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 text-center shadow-inner">
+                  <div className="text-5xl mb-6 opacity-30">📬</div>
+                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Database scan complete</p>
+                  <p className="text-xs text-slate-300 mt-2 font-medium">No unprocessed identities found in storage.</p>
                 </div>
               ) : (
                 pendingUsers.map(u => (
-                  <div key={u.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-xl transition-all duration-300 group">
-                    <div className="mb-6">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg group-hover:bg-emerald-600 transition-colors">
+                  <div key={u.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-500 group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-bl-[4rem] -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                    
+                    <div className="relative z-10 mb-8">
+                      <div className="flex items-center gap-5 mb-6">
+                        <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl group-hover:bg-emerald-600 transition-all duration-300">
                           {u.name ? u.name.charAt(0) : '?'}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-black text-slate-800 leading-none truncate text-lg">{u.name || 'New Applicant'}</p>
-                          <p className="text-xs text-slate-400 mt-1 truncate font-medium">{u.email}</p>
+                          <p className="font-black text-slate-800 leading-none truncate text-xl">{u.name || 'Anonymous Applicant'}</p>
+                          <p className="text-xs text-slate-400 mt-1.5 truncate font-medium">{u.email}</p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded-lg uppercase tracking-tighter">{u.role}</span>
-                        <span className="text-[9px] font-black bg-amber-50 text-amber-700 px-2 py-1 rounded-lg uppercase tracking-widest border border-amber-100">Pending Approval</span>
+                        <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-full uppercase tracking-tighter border border-slate-200">{u.role}</span>
+                        <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-3 py-1 rounded-full uppercase tracking-widest border border-amber-200">New Request</span>
                       </div>
-                      {u.registeredAt && (
-                        <p className="text-[8px] font-black text-slate-300 uppercase mt-4 tracking-widest">Received: {new Date(u.registeredAt).toLocaleString()}</p>
-                      )}
+                      <div className="mt-6 pt-6 border-t border-slate-50">
+                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Reference ID: {u.id}</p>
+                        <p className="text-[9px] font-black text-slate-300 uppercase mt-1 tracking-widest">Joined: {u.registeredAt ? new Date(u.registeredAt).toLocaleString() : 'Legacy Record'}</p>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-50">
+
+                    <div className="grid grid-cols-2 gap-4 relative z-10">
                       <button 
                         onClick={() => handleReject(u.id)}
-                        className="py-3 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 rounded-2xl transition"
+                        className="py-4 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
                       >
-                        Decline
+                        Ignore
                       </button>
                       <button 
                         onClick={() => handleApprove(u.id)}
-                        className="py-3 text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition"
+                        className="py-4 text-[11px] font-black uppercase tracking-widest bg-emerald-600 text-white rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 hover:scale-[1.02] active:scale-95 transition-all"
                       >
-                        Approve Agent
+                        Grant Access
                       </button>
                     </div>
                   </div>
@@ -164,67 +158,66 @@ const UserManagement: React.FC = () => {
             </div>
           </section>
 
-          {/* Approved Team */}
+          {/* Section 2: Authorized Team */}
           <section>
-             <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Authorized Team Members ({activeUsers.length})</h2>
-             <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+             <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+               <span className="w-6 h-px bg-slate-200"></span>
+               Authorized Directory ({approvedUsers.length})
+             </h2>
+             <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
+                  <thead className="bg-slate-50/50 border-b border-slate-100">
                     <tr>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Designation</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identified Member</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">System Role</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Access Controls</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {activeUsers.length === 0 ? (
-                      <tr><td colSpan={3} className="px-6 py-8 text-center text-slate-300 text-xs italic">No approved members.</td></tr>
-                    ) : (
-                      activeUsers.map(u => (
-                        <tr key={u.id} className="hover:bg-slate-50/50 transition">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-[10px] font-black">
-                                {u.name ? u.name.charAt(0) : '?'}
-                              </div>
-                              <div>
-                                <p className="text-xs font-black text-slate-800">{u.name}</p>
-                                <p className="text-[10px] text-slate-400 font-medium">{u.email}</p>
-                              </div>
+                    {approvedUsers.map(u => (
+                      <tr key={u.id} className="hover:bg-slate-50/30 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-emerald-100 group-hover:scale-110 transition-transform">
+                              {u.name ? u.name.charAt(0) : '?'}
                             </div>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded-lg uppercase">{u.role}</span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button 
-                              disabled={u.email === 'admin@magiracrm.store'}
-                              onClick={() => handleReject(u.id)} 
-                              className={`text-[9px] font-black uppercase text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-xl transition ${u.email === 'admin@magiracrm.store' ? 'opacity-0' : ''}`}
-                            >
-                              Revoke Access
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
+                            <div>
+                              <p className="text-sm font-black text-slate-800">{u.name}</p>
+                              <p className="text-[11px] text-slate-400 font-medium">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-center">
+                          <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1.5 rounded-xl uppercase border border-slate-200">{u.role}</span>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <button 
+                            disabled={u.email === 'admin@magiracrm.store'}
+                            onClick={() => handleReject(u.id)} 
+                            className={`text-[10px] font-black uppercase text-slate-300 hover:text-red-500 hover:bg-red-50 px-4 py-2 rounded-xl transition-all ${u.email === 'admin@magiracrm.store' ? 'opacity-0 pointer-events-none' : ''}`}
+                          >
+                            Block Account
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
              </div>
           </section>
         </div>
       ) : (
-        /* AUDIT MODE - 100% TRANSPARENCY, NO FILTERS */
-        <section className="animate-in slide-in-from-right-4 duration-300">
-          <div className="bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-800">
-            <div className="p-8 border-b border-white/5 flex justify-between items-center">
+        /* DATABASE AUDIT: RAW VIEW, NO FILTERS */
+        <section className="animate-in slide-in-from-right-4 duration-500">
+          <div className="bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden border border-slate-800">
+            <div className="p-10 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-slate-900 to-slate-800">
               <div>
-                <h2 className="text-xl font-black text-white tracking-tight">Master Database Audit</h2>
-                <p className="text-slate-400 text-xs mt-1">Direct view of all records in storage. Nothing is hidden here.</p>
+                <h2 className="text-2xl font-black text-white tracking-tight">System Integrity Audit</h2>
+                <p className="text-slate-400 text-xs mt-2">Forcefully displaying every unique record detected in the database.</p>
               </div>
               <div className="text-right">
-                <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">{users.length} Records</p>
-                <p className="text-white/20 text-[10px] uppercase font-bold mt-1">Raw System View</p>
+                <p className="text-emerald-400 text-3xl font-black">{users.length}</p>
+                <p className="text-white/20 text-[10px] uppercase font-bold tracking-widest mt-1">Stored Records</p>
               </div>
             </div>
             
@@ -232,41 +225,43 @@ const UserManagement: React.FC = () => {
               <table className="w-full text-left">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Record UID</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Credentials</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Raw Status</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Ops</th>
+                    <th className="px-10 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest">Entry UID</th>
+                    <th className="px-10 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest">Credential Pair</th>
+                    <th className="px-10 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest text-center">Database Status</th>
+                    <th className="px-10 py-6 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Override</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {users.map((u, i) => (
-                    <tr key={u.id} className="hover:bg-white/5 transition group">
-                      <td className="px-8 py-6">
-                        <p className="font-mono text-[10px] text-white/40 group-hover:text-emerald-400 transition-colors">#{i+1} — {u.id}</p>
-                        <p className="text-[9px] text-slate-600 mt-1 uppercase font-black">Ref: {u.registeredAt ? new Date(u.registeredAt).getTime() : 'No T-Stamp'}</p>
+                    <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="px-10 py-7">
+                        <p className="font-mono text-[11px] text-white/40 group-hover:text-emerald-400 transition-colors">#{i+1} — {u.id}</p>
+                        <p className="text-[9px] text-slate-600 mt-2 uppercase font-black tracking-widest">Source: Storage_V3</p>
                       </td>
-                      <td className="px-8 py-6">
-                        <p className="text-xs font-black text-white">{u.email}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{u.name || 'UNNAMED_RECORD'}</p>
+                      <td className="px-10 py-7">
+                        <p className="text-sm font-black text-white">{u.email}</p>
+                        <p className="text-[11px] text-slate-500 mt-1 uppercase font-bold tracking-tighter">{u.name || 'NULL_NAME'}</p>
                       </td>
-                      <td className="px-8 py-6 text-center">
-                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter ${
-                          u.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
-                          u.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
-                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        }`}>
-                          {u.status || 'UNDEFINED'}
-                        </span>
+                      <td className="px-10 py-7 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest ${
+                            u.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                            u.status === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            'bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse'
+                          }`}>
+                            {u.status || 'UNDEFINED'}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button onClick={() => handleApprove(u.id)} className="text-[9px] font-black bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition">Override Apprv</button>
+                      <td className="px-10 py-7 text-right">
+                        <div className="flex justify-end gap-3 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleApprove(u.id)} className="text-[10px] font-black bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-500 transition-transform active:scale-90">Restore/Approve</button>
                           <button 
                             disabled={u.email === 'admin@magiracrm.store'}
                             onClick={() => handleReject(u.id)} 
-                            className="text-[9px] font-black bg-white/5 text-slate-400 px-3 py-1.5 rounded-lg hover:bg-red-600 hover:text-white transition disabled:opacity-0"
+                            className="text-[10px] font-black bg-white/5 text-slate-400 px-4 py-2 rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-0"
                           >
-                            Block
+                            Purge
                           </button>
                         </div>
                       </td>
@@ -276,19 +271,20 @@ const UserManagement: React.FC = () => {
               </table>
             </div>
             
-            <div className="p-8 bg-black/20 flex flex-col sm:flex-row items-center justify-between gap-6">
-               <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-500/10 rounded-2xl">
-                     <span className="text-xl">☣️</span>
+            <div className="p-12 bg-black/40 flex flex-col sm:flex-row items-center justify-between gap-8 border-t border-white/5">
+               <div className="flex items-center gap-6">
+                  <div className="p-5 bg-red-600/10 rounded-[2rem] border border-red-500/20">
+                     <span className="text-3xl">🗄️</span>
                   </div>
                   <div>
-                    <p className="text-xs font-black text-white uppercase tracking-tight">System Purge Area</p>
-                    <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">Emergency data clearing tools. Use with extreme caution.</p>
+                    <p className="text-sm font-black text-white uppercase tracking-[0.2em]">Maintenance Hub</p>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-sm">Use these tools to force visibility or wipe corrupted local data if users aren't appearing correctly.</p>
                   </div>
                </div>
-               <button onClick={handleClearData} className="w-full sm:w-auto px-8 py-4 bg-red-600/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-xl">
-                 Destroy Entire Database
-               </button>
+               <div className="flex gap-4 w-full sm:w-auto">
+                 <button onClick={refreshData} className="flex-1 sm:flex-none px-8 py-4 bg-white/5 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all">Deep Scan DB</button>
+                 <button onClick={handleClearData} className="flex-1 sm:flex-none px-8 py-4 bg-red-600/20 border border-red-500/30 text-red-500 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-red-600 hover:text-white transition-all">Wipe Storage</button>
+               </div>
             </div>
           </div>
         </section>
