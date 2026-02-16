@@ -3,7 +3,7 @@ import {
   PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
 } from '../types';
 
-const STORAGE_KEY = 'magira_crm_data_v2'; // Bumped version to clear potentially corrupted old state
+const STORAGE_KEY = 'magira_crm_data_v3'; // Version bump for data integrity fix
 
 interface AppData {
   products: Product[];
@@ -95,7 +95,7 @@ class MockDb {
       parsed = JSON.parse(JSON.stringify(INITIAL_DATA));
     }
 
-    // Strict Integrity/Migration logic
+    // Integrity checks
     if (!parsed.users || !Array.isArray(parsed.users)) {
       parsed.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
     }
@@ -115,7 +115,7 @@ class MockDb {
       }
     }
 
-    // Force migration of missing status fields for all users
+    // Fix status mapping for all users
     parsed.users = parsed.users.map((u: any) => {
       if (!u.status) {
         u.status = u.isApproved ? 'approved' : 'pending';
@@ -150,14 +150,15 @@ class MockDb {
 
   register(name: string, email: string, password: string, role: UserRole) {
     this.sync();
-    if (this.data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+    const cleanEmail = email.toLowerCase().trim();
+    if (this.data.users.some(u => u.email.toLowerCase() === cleanEmail)) {
       throw new Error('This email is already registered.');
     }
 
     const newUser: User = {
       id: 'u-' + Math.random().toString(36).substr(2, 9),
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       password,
       role,
       isApproved: role === UserRole.ADMIN,
@@ -167,13 +168,14 @@ class MockDb {
 
     this.data.users.push(newUser);
     this.save();
-    console.log('User registered successfully:', newUser);
+    console.log('User registered in DB:', newUser.email, newUser.status);
     return newUser;
   }
 
   login(email: string, password?: string) {
     this.sync();
-    const user = this.data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const cleanEmail = email.toLowerCase().trim();
+    const user = this.data.users.find(u => u.email.toLowerCase() === cleanEmail);
     
     if (!user) throw new Error('Account not found.');
     if (user.password && password !== user.password) throw new Error('Incorrect password.');
