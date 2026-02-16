@@ -164,19 +164,21 @@ class MockDb {
 
     this.data.users.push(newUser);
     
-    // Critical Save and Verify logic
-    const success = this.save();
-    if (!success) {
-      throw new Error('Registration Failed: Your browser refused to save the data. Please disable Incognito/Private mode or clear browser cache.');
+    // 1. Attempt Save
+    const saveSuccess = this.save();
+    if (!saveSuccess) {
+      throw new Error('SYSTEM ERROR: Your browser refused to save registration data. Admin will NOT see your request. Please disable Private Mode or clear cache.');
     }
 
-    // Immediate Verification Check
-    const verification = localStorage.getItem(STORAGE_KEY);
-    if (!verification || !verification.includes(cleanEmail)) {
-      throw new Error('Registration Failed: Critical Data Sync Error. The application was unable to verify your record in system storage.');
+    // 2. Final Persistence Verification
+    this.sync(); // Force read back from localStorage
+    const verifiedUser = this.data.users.find(u => u.email.toLowerCase() === cleanEmail);
+    
+    if (!verifiedUser || verifiedUser.status !== 'pending') {
+      throw new Error('SYNC ERROR: Registration was sent but failed to finalize. Admin will NOT be able to approve you. Please try again or contact support.');
     }
 
-    console.log('User registered & verified:', cleanEmail);
+    console.log('User registered & double-verified:', cleanEmail);
     return newUser;
   }
 

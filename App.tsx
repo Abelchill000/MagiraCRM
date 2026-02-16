@@ -53,17 +53,18 @@ const App: React.FC = () => {
     setAuthError('');
     setIsRegistering(true);
     
-    // Slight delay to allow UI feedback
+    // Slight delay to allow UI feedback for the agent
     setTimeout(() => {
       try {
         db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
         setAuthView('pending');
       } catch (err: any) {
-        setAuthError(err.message || 'Registration encountered an unexpected error.');
+        // If registration fails, let the user know specifically that Admin won't see them
+        setAuthError(err.message || 'Critical Registration Failure: Your data could not be verified in the system. The admin will NOT receive your application.');
       } finally {
         setIsRegistering(false);
       }
-    }, 800);
+    }, 1000);
   };
 
   const handleLogout = () => {
@@ -130,9 +131,13 @@ const App: React.FC = () => {
           {authView === 'signup' && (
             <form onSubmit={handleSignUp} className="space-y-4">
               {authError && (
-                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-                  <p className="text-xs font-black text-red-600 uppercase tracking-tight mb-1 text-center">Registration Failed</p>
-                  <p className="text-[10px] text-red-500 text-center leading-relaxed">{authError}</p>
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl animate-in shake duration-500">
+                  <div className="flex items-center gap-2 mb-2 text-red-700">
+                    <span className="text-lg">⚠️</span>
+                    <p className="text-xs font-black uppercase tracking-tight">Registration Failed</p>
+                  </div>
+                  <p className="text-[11px] text-red-600 leading-relaxed font-medium">{authError}</p>
+                  <p className="text-[9px] text-red-400 mt-2 italic font-bold">Important: If this persists, the Admin Access Control panel will not show your name.</p>
                 </div>
               )}
               <div className="space-y-4">
@@ -140,6 +145,7 @@ const App: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
                   <input 
                     type="text" required
+                    placeholder="Enter your real name"
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, name: e.target.value})}
                   />
@@ -148,6 +154,7 @@ const App: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email</label>
                   <input 
                     type="email" required
+                    placeholder="agent@email.com"
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, email: e.target.value})}
                   />
@@ -156,6 +163,7 @@ const App: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Create Password</label>
                   <input 
                     type="password" required
+                    placeholder="••••••••"
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, password: e.target.value})}
                   />
@@ -169,15 +177,15 @@ const App: React.FC = () => {
                 {isRegistering ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Registering...
+                    Verifying Records...
                   </>
                 ) : (
-                  'Register for Approval'
+                  'Submit Application'
                 )}
               </button>
               <div className="text-center pt-4">
                 <button type="button" onClick={() => { setAuthError(''); setAuthView('login'); }} className="text-xs font-bold text-slate-400 hover:text-slate-600">
-                  Already have an account? Log In
+                  Go back to Login
                 </button>
               </div>
             </form>
@@ -185,12 +193,14 @@ const App: React.FC = () => {
 
           {authView === 'pending' && (
             <div className="text-center py-6 animate-in slide-in-from-bottom-4">
-              <div className="text-6xl mb-6">⏳</div>
-              <h2 className="text-2xl font-black text-slate-800">Success! Application Pending</h2>
+              <div className="text-6xl mb-6">✅</div>
+              <h2 className="text-2xl font-black text-slate-800">Application Verified</h2>
               <p className="text-slate-500 text-sm mt-4 px-4 leading-relaxed">
-                Your application has been successfully logged into our systems. An administrator will review your profile shortly.
+                Your agent profile has been successfully saved to our master records.
+                <br /><br />
+                <strong className="text-emerald-600">Admin Approval Required:</strong> You will appear in the "Awaiting Approval" list for the administrator immediately.
               </p>
-              <button onClick={() => setAuthView('login')} className="mt-8 text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-6 py-3 rounded-full">
+              <button onClick={() => setAuthView('login')} className="mt-8 text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-6 py-3 rounded-full hover:bg-emerald-100 transition">
                 Return to Login
               </button>
             </div>
