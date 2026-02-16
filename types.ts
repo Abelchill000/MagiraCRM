@@ -123,6 +123,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: UserRole;
   stateId?: string;
   isApproved: boolean;

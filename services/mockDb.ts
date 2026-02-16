@@ -44,7 +44,8 @@ const INITIAL_DATA: AppData = {
     {
       id: 'u1',
       name: 'Admin Magira',
-      email: 'admin@magira.com',
+      email: 'admin@magiracrm.store',
+      password: 'password123',
       role: UserRole.ADMIN,
       isApproved: true,
       status: 'approved',
@@ -61,6 +62,12 @@ class MockDb {
     const saved = localStorage.getItem(STORAGE_KEY);
     this.data = saved ? JSON.parse(saved) : INITIAL_DATA;
     if (!this.data.users) this.data.users = INITIAL_DATA.users;
+    
+    // Migration: ensure initial admin exists if storage was empty or old
+    if (!this.data.users.find(u => u.email === 'admin@magiracrm.store')) {
+       this.data.users.push(INITIAL_DATA.users[0]);
+       this.save();
+    }
   }
 
   private save() {
@@ -72,7 +79,7 @@ class MockDb {
   
   getUsers() { return this.data.users; }
 
-  register(name: string, email: string, role: UserRole) {
+  register(name: string, email: string, password: string, role: UserRole) {
     if (this.data.users.find(u => u.email === email)) {
       throw new Error('Email already registered');
     }
@@ -80,6 +87,7 @@ class MockDb {
       id: 'u' + Math.random().toString(36).substr(2, 9),
       name,
       email,
+      password,
       role,
       isApproved: role === UserRole.ADMIN, // Admin auto-approved for demo purposes
       status: role === UserRole.ADMIN ? 'approved' : 'pending',
@@ -90,9 +98,15 @@ class MockDb {
     return newUser;
   }
 
-  login(email: string) {
+  login(email: string, password?: string) {
     const user = this.data.users.find(u => u.email === email);
     if (!user) throw new Error('User not found');
+    
+    // Password check (if password exists in DB)
+    if (user.password && password !== user.password) {
+      throw new Error('Invalid password');
+    }
+    
     if (user.status === 'pending') throw new Error('Account pending approval');
     if (user.status === 'rejected') throw new Error('Account access denied');
     

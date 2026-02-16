@@ -25,7 +25,8 @@ const App: React.FC = () => {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'pending'>('login');
   const [authError, setAuthError] = useState('');
   const [emailInput, setEmailInput] = useState('');
-  const [signUpData, setSignUpData] = useState({ name: '', email: '' });
+  const [passwordInput, setPasswordInput] = useState('');
+  const [signUpData, setSignUpData] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -37,7 +38,7 @@ const App: React.FC = () => {
     e.preventDefault();
     setAuthError('');
     try {
-      const loggedUser = db.login(emailInput);
+      const loggedUser = db.login(emailInput, passwordInput);
       setUser(loggedUser);
     } catch (err: any) {
       setAuthError(err.message);
@@ -51,7 +52,7 @@ const App: React.FC = () => {
     e.preventDefault();
     setAuthError('');
     try {
-      db.register(signUpData.name, signUpData.email, UserRole.SALES_AGENT);
+      db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
       setAuthView('pending');
     } catch (err: any) {
       setAuthError(err.message);
@@ -62,6 +63,7 @@ const App: React.FC = () => {
     db.logout();
     setUser(null);
     setAuthView('login');
+    setPasswordInput('');
   };
 
   const handleRoleSwitch = (newRole: UserRole) => {
@@ -91,10 +93,20 @@ const App: React.FC = () => {
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email Address</label>
                 <input 
                   type="email" required
-                  placeholder="admin@magira.com"
+                  placeholder="admin@magiracrm.store"
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                   value={emailInput}
                   onChange={e => setEmailInput(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password</label>
+                <input 
+                  type="password" required
+                  placeholder="••••••••"
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
+                  value={passwordInput}
+                  onChange={e => setPasswordInput(e.target.value)}
                 />
               </div>
               <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-200 transition">
@@ -126,6 +138,14 @@ const App: React.FC = () => {
                     type="email" required
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, email: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Create Password</label>
+                  <input 
+                    type="password" required
+                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
+                    onChange={e => setSignUpData({...signUpData, password: e.target.value})}
                   />
                 </div>
               </div>
