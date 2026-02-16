@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo } from 'react';
-import { db } from '../services/mockDb';
+import { db } from '../services/mockDb.ts';
 import { 
   Order, OrderItem, PaymentStatus, DeliveryStatus, 
   Product, UserRole, User 
-} from '../types';
+} from '../types.ts';
 
 interface OrdersProps {
   user: User;
@@ -100,7 +100,6 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const handleStatusChange = (orderId: string, status: DeliveryStatus) => {
-    // Enforcement: Sales Agents can ONLY change to Rescheduled
     if (isAgent && status !== DeliveryStatus.RESCHEDULED) {
       alert("Sales Agents can only change order status to 'Rescheduled'. Contact an Admin for other changes.");
       return;
@@ -147,21 +146,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const copyReceiptText = (order: Order) => {
     const itemsText = order.items.map(i => `${i.productName} x${i.quantity} @ ₦${i.priceAtOrder.toLocaleString()}`).join('\n');
-    const text = `
-📜 MAGIRA RECEIPT
-Order ID: ${order.id}
-Customer: ${order.customerName}
-Phone: ${order.phone}
-Address: ${order.address}
----
-Items:
-${itemsText}
----
-Total: ₦${order.totalAmount.toLocaleString()}
-Payment: ${order.paymentStatus}
-Tracking: ${order.trackingId}
-    `.trim();
-    
+    const text = `📜 MAGIRA RECEIPT\nOrder ID: ${order.id}\nCustomer: ${order.customerName}\nPhone: ${order.phone}\nAddress: ${order.address}\n---\nItems:\n${itemsText}\n---\nTotal: ₦${order.totalAmount.toLocaleString()}\nPayment: ${order.paymentStatus}\nTracking: ${order.trackingId}`.trim();
     navigator.clipboard.writeText(text);
     alert('Receipt copied to clipboard!');
   };
@@ -172,22 +157,34 @@ Tracking: ${order.trackingId}
     window.open(url, '_blank');
   };
 
+  const getStatusColor = (status: DeliveryStatus) => {
+    switch (status) {
+      case DeliveryStatus.DELIVERED: return 'bg-emerald-100 text-emerald-700';
+      case DeliveryStatus.FAILED: return 'bg-red-100 text-red-700';
+      case DeliveryStatus.CANCELLED: return 'bg-slate-200 text-slate-600';
+      case DeliveryStatus.RESCHEDULED: return 'bg-amber-100 text-amber-700';
+      case DeliveryStatus.PENDING: return 'bg-blue-100 text-blue-700';
+      default: return 'bg-slate-100 text-slate-500';
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Order Management</h1>
-          <p className="text-slate-500">Track shipments, payments, and customer deliveries.</p>
+          <p className="text-slate-500 text-sm">Track shipments, payments, and customer deliveries.</p>
         </div>
         <button 
           onClick={() => setShowCreateModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition"
+          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-100 transition"
         >
           + New Order
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
@@ -222,16 +219,9 @@ Tracking: ${order.trackingId}
                       <select 
                         value={order.deliveryStatus} 
                         onChange={(e) => handleStatusChange(order.id, e.target.value as DeliveryStatus)}
-                        className={`text-xs font-bold px-2 py-1 rounded-full border-none focus:ring-0 cursor-pointer ${
-                          order.deliveryStatus === DeliveryStatus.DELIVERED ? 'bg-emerald-100 text-emerald-700' :
-                          order.deliveryStatus === DeliveryStatus.FAILED ? 'bg-red-100 text-red-700' :
-                          order.deliveryStatus === DeliveryStatus.CANCELLED ? 'bg-slate-200 text-slate-600' :
-                          order.deliveryStatus === DeliveryStatus.RESCHEDULED ? 'bg-amber-100 text-amber-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}
+                        className={`text-xs font-bold px-2 py-1 rounded-full border-none focus:ring-0 cursor-pointer ${getStatusColor(order.deliveryStatus)}`}
                       >
                         {Object.values(DeliveryStatus).map(s => {
-                          // Filter options for Agent: They can see current, but only pick Rescheduled if it isn't already
                           if (isAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
                           return <option key={s} value={s}>{s}</option>;
                         })}
@@ -240,13 +230,13 @@ Tracking: ${order.trackingId}
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">₦{order.totalAmount.toLocaleString()}</p>
                       {order.deliveryStatus === DeliveryStatus.DELIVERED && order.logisticsCost > 0 && (
-                        <p className="text-[10px] text-red-500 font-bold">-{order.logisticsCost.toLocaleString()} logistics deduction</p>
+                        <p className="text-[10px] text-red-500 font-bold">-{order.logisticsCost.toLocaleString()} logistics</p>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end space-x-2">
-                        <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-400 hover:text-emerald-600" title="Copy Receipt">📄</button>
-                        <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-400 hover:text-green-500" title="WhatsApp Share">📲</button>
+                        <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-400 hover:text-emerald-600">📄</button>
+                        <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-400 hover:text-green-500">📲</button>
                       </div>
                     </td>
                   </tr>
@@ -257,53 +247,85 @@ Tracking: ${order.trackingId}
         </div>
       </div>
 
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {orders.length === 0 ? (
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200 text-slate-400">
+            No orders found.
+          </div>
+        ) : (
+          orders.map(order => (
+            <div key={order.id} className={`bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col space-y-4 ${order.deliveryStatus === DeliveryStatus.CANCELLED ? 'opacity-50' : ''}`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">ID: {order.id}</span>
+                  <p className="mt-1 font-bold text-slate-800">{order.customerName}</p>
+                  <p className="text-xs text-slate-500">{order.phone}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-black text-slate-900">₦{order.totalAmount.toLocaleString()}</p>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase">Total</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-50">
+                <select 
+                  value={order.deliveryStatus} 
+                  onChange={(e) => handleStatusChange(order.id, e.target.value as DeliveryStatus)}
+                  className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border-none focus:ring-0 cursor-pointer w-32 ${getStatusColor(order.deliveryStatus)}`}
+                >
+                  {Object.values(DeliveryStatus).map(s => {
+                    if (isAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
+                    return <option key={s} value={s}>{s}</option>;
+                  })}
+                </select>
+
+                <div className="flex gap-2">
+                  <button onClick={() => copyReceiptText(order)} className="p-2 bg-slate-50 rounded-lg text-slate-500">📄</button>
+                  <button onClick={() => shareWhatsApp(order)} className="p-2 bg-emerald-50 rounded-lg text-emerald-600">📲</button>
+                </div>
+              </div>
+
+              {order.deliveryStatus === DeliveryStatus.RESCHEDULED && order.rescheduleDate && (
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                  <p className="text-[10px] text-amber-800 font-bold uppercase mb-1">📅 Rescheduled For:</p>
+                  <p className="text-xs text-amber-900 font-medium">{order.rescheduleDate}</p>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Reschedule Modal */}
       {showRescheduleModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 animate-in fade-in zoom-in duration-200">
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Reschedule Delivery</h2>
-            <p className="text-slate-500 text-sm mb-6">Set a new delivery date and capture specific customer instructions.</p>
-            
-            <form onSubmit={handleRescheduleSubmit} className="space-y-5">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 md:p-8 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Reschedule</h2>
+            <p className="text-slate-500 text-sm mb-6">Set a new delivery date.</p>
+            <form onSubmit={handleRescheduleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">New Reschedule Date</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">New Date</label>
                 <input 
-                  required
-                  type="date"
-                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 transition-all font-bold"
+                  required type="date"
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500"
                   value={rescheduleData.date}
                   onChange={(e) => setRescheduleData({...rescheduleData, date: e.target.value})}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Customer Instructions</label>
-                <textarea 
-                  required
-                  placeholder="e.g. Deliver only in the evening after 6pm..."
-                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 transition-all text-sm"
-                  rows={3}
-                  value={rescheduleData.notes}
-                  onChange={(e) => setRescheduleData({...rescheduleData, notes: e.target.value})}
-                />
-              </div>
-              <div className="flex items-center gap-3 bg-amber-50 p-4 rounded-xl border border-amber-100">
-                <input 
-                  type="checkbox"
-                  id="reminder"
-                  className="w-4 h-4 text-amber-600 focus:ring-amber-500 border-slate-300 rounded"
-                  checked={rescheduleData.reminder}
-                  onChange={(e) => setRescheduleData({...rescheduleData, reminder: e.target.checked})}
-                />
-                <label htmlFor="reminder" className="text-xs font-bold text-amber-800">Remind me on this date</label>
-              </div>
-              <div className="flex flex-col gap-3 pt-4">
-                <button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-100 transition-all">
-                  Apply Reschedule
-                </button>
-                <button type="button" onClick={() => setShowRescheduleModal(null)} className="w-full py-3 text-slate-400 font-bold hover:text-slate-600 transition">
-                  Cancel
-                </button>
-              </div>
+              <textarea 
+                required placeholder="Instructions..."
+                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 text-sm"
+                rows={3}
+                value={rescheduleData.notes}
+                onChange={(e) => setRescheduleData({...rescheduleData, notes: e.target.value})}
+              />
+              <button type="submit" className="w-full bg-amber-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-100 transition">
+                Apply Reschedule
+              </button>
+              <button type="button" onClick={() => setShowRescheduleModal(null)} className="w-full py-2 text-slate-400 font-bold text-sm">
+                Cancel
+              </button>
             </form>
           </div>
         </div>
@@ -312,34 +334,20 @@ Tracking: ${order.trackingId}
       {/* Logistics Cost Modal */}
       {showLogisticsPrompt && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 animate-in fade-in zoom-in duration-200">
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Confirm Delivery</h2>
-            <p className="text-slate-500 text-sm mb-6">Enter the logistics cost for this delivery. This will be deducted from revenue calculations.</p>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 md:p-8 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-2xl font-black text-slate-800 mb-2 text-center sm:text-left">Logistics Cost</h2>
+            <p className="text-slate-500 text-sm mb-6 text-center sm:text-left">Enter shipping cost for this delivery.</p>
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Logistics Cost (₦)</label>
-                <input 
-                  type="number" 
-                  autoFocus
-                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-lg" 
-                  value={tempLogisticsCost}
-                  onChange={(e) => setTempLogisticsCost(Number(e.target.value))}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex flex-col gap-3 pt-4">
-                <button 
-                  onClick={handleLogisticsSubmit}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100 transition-all"
-                >
-                  Finalize Delivery
-                </button>
-                <button 
-                  onClick={() => setShowLogisticsPrompt(null)} 
-                  className="w-full py-3 text-slate-400 font-bold hover:text-slate-600 transition"
-                >
-                  Cancel
-                </button>
+              <input 
+                type="number" autoFocus
+                className="w-full bg-slate-50 border-none rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold text-lg text-center sm:text-left" 
+                value={tempLogisticsCost}
+                onChange={(e) => setTempLogisticsCost(Number(e.target.value))}
+                placeholder="0"
+              />
+              <div className="flex flex-col gap-2">
+                <button onClick={handleLogisticsSubmit} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold">Confirm Delivered</button>
+                <button onClick={() => setShowLogisticsPrompt(null)} className="w-full py-2 text-slate-400 font-bold text-sm">Cancel</button>
               </div>
             </div>
           </div>
@@ -348,117 +356,82 @@ Tracking: ${order.trackingId}
 
       {/* Create Order Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[85vh]">
-            <div className="flex-1 p-8 overflow-y-auto border-r border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">Create New Order</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-0 md:p-4 z-50">
+          <div className="bg-white md:rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-full md:h-[85vh]">
+            {/* Header Mobile Only */}
+            <div className="md:hidden p-4 border-b flex justify-between items-center shrink-0">
+              <h2 className="font-black text-slate-800">New Order</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 p-2">✕</button>
+            </div>
+
+            <div className="flex-1 p-6 md:p-8 overflow-y-auto border-r border-slate-100">
               <form onSubmit={handleCreateOrder} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700">Customer Name</label>
-                    <input required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, customerName: e.target.value})} />
+                    <input required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, customerName: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Phone Number</label>
-                    <input required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
+                    <label className="block text-sm font-medium text-slate-700">Phone</label>
+                    <input required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">State</label>
-                    <select required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, stateId: e.target.value})}>
-                      <option value="">-- Select State --</option>
+                    <select required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, stateId: e.target.value})}>
+                      <option value="">-- Select --</option>
                       {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Delivery Address</label>
-                    <textarea required rows={2} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, address: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Payment Status</label>
-                    <select className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, paymentStatus: e.target.value as PaymentStatus})}>
-                      {Object.values(PaymentStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700">Address</label>
+                    <textarea required rows={2} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, address: e.target.value})} />
                   </div>
                 </div>
                 
-                <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                   <button type="button" onClick={() => setShowCreateModal(false)} className="text-slate-400 font-medium hover:text-slate-600 transition">Cancel</button>
-                   <button type="submit" disabled={!newOrder.items?.length} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition disabled:opacity-50 shadow-lg shadow-emerald-100">
+                <div className="hidden md:flex pt-4 border-t border-slate-100 justify-between items-center">
+                   <button type="button" onClick={() => setShowCreateModal(false)} className="text-slate-400 font-medium">Cancel</button>
+                   <button type="submit" disabled={!newOrder.items?.length} className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold">
                     Generate Order
                    </button>
                 </div>
               </form>
             </div>
 
-            <div className="w-full md:w-96 bg-slate-50 p-6 flex flex-col border-l border-slate-200">
-              <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-between">
-                <span>Product Catalog</span>
-                <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Click to Add</span>
+            <div className="w-full md:w-96 bg-slate-50 p-6 flex flex-col border-l border-slate-200 shrink-0 h-[400px] md:h-auto overflow-hidden">
+              <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-between shrink-0">
+                <span>Catalog</span>
+                <span className="text-[10px] text-slate-400 uppercase font-black">Tap to Add</span>
               </h3>
-              <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto mb-6 pr-1">
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 flex-1 overflow-y-auto mb-6 pr-1">
                 {products.map(p => (
                   <button 
                     key={p.id}
                     onClick={() => handleAddItem(p.id)}
-                    className="w-full text-left bg-white border border-slate-200 p-3 rounded-xl hover:border-emerald-500 hover:shadow-sm transition group relative flex justify-between items-center"
+                    className="w-full text-left bg-white border border-slate-200 p-3 rounded-xl hover:border-emerald-500 flex justify-between items-center group shrink-0"
                   >
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{p.name}</p>
+                      <p className="text-[11px] font-bold text-slate-800 line-clamp-1">{p.name}</p>
                       <p className="text-[10px] text-emerald-600 font-black">₦{p.sellingPrice.toLocaleString()}</p>
                     </div>
-                    <div className="bg-emerald-50 text-emerald-600 rounded-lg w-6 h-6 flex items-center justify-center text-xs font-bold group-hover:bg-emerald-600 group-hover:text-white transition-colors">+</div>
                   </button>
                 ))}
               </div>
 
-              <div className="border-t border-slate-200 pt-6">
-                <h3 className="text-xs font-black text-slate-400 uppercase mb-4 tracking-widest">Selected Cart Items</h3>
-                <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-                  {newOrder.items?.map(item => (
-                    <div key={item.productId} className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm animate-in fade-in slide-in-from-right-2 duration-200">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[11px] font-bold text-slate-700 truncate flex-1">{item.productName}</span>
-                        <button onClick={() => handleRemoveItem(item.productId)} className="text-slate-300 hover:text-red-500 text-[10px] ml-2 font-black">✕</button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-slate-100 rounded-lg px-2 py-1">
-                           <span className="text-[10px] text-slate-500 font-bold mr-2 uppercase">Qty:</span>
-                           <span className="text-xs font-black text-slate-800">{item.quantity}</span>
-                        </div>
-                        <div className="flex-1 relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-emerald-600 font-black">₦</span>
-                          <input 
-                            type="number"
-                            className="w-full bg-emerald-50/50 border border-emerald-100 rounded-lg pl-5 py-1 text-xs font-black text-emerald-700 focus:ring-1 focus:ring-emerald-500 border-none appearance-none"
-                            value={item.priceAtOrder}
-                            onChange={(e) => handleUpdateItemPrice(item.productId, Number(e.target.value))}
-                            title="Manual Price Adjustment"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {(!newOrder.items || newOrder.items.length === 0) && (
-                    <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-white/50">
-                       <p className="text-[10px] text-slate-400 font-bold uppercase">Empty Cart</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="mt-6 pt-4 border-t border-slate-200">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Order Value</p>
-                      <p className="text-2xl font-black text-slate-900 leading-none mt-1">
-                        ₦{newOrder.items?.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0).toLocaleString() || 0}
-                      </p>
-                    </div>
-                    {newOrder.items && newOrder.items.length > 0 && (
-                      <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1 rounded uppercase">
-                        {newOrder.items.length} Product(s)
-                      </span>
-                    )}
+              <div className="border-t border-slate-200 pt-4 shrink-0 bg-slate-50">
+                <div className="flex justify-between items-end mb-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cart Total</p>
+                    <p className="text-xl font-black text-slate-900 mt-1">
+                      ₦{newOrder.items?.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0).toLocaleString() || 0}
+                    </p>
                   </div>
+                  <button 
+                    type="submit" 
+                    onClick={() => document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
+                    className="md:hidden bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm"
+                  >
+                    Generate Order
+                  </button>
                 </div>
               </div>
             </div>

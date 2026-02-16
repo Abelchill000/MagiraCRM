@@ -20,7 +20,14 @@ import Navbar from './components/Navbar.tsx';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(db.getCurrentUser());
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+
+  // Auto-close sidebar on mobile when tab changes
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [activeTab]);
 
   if (!user) {
     return (
@@ -85,7 +92,15 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden">
+      {/* Mobile Overlay Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-20 md:hidden" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -93,15 +108,18 @@ const App: React.FC = () => {
         setIsOpen={setSidebarOpen} 
         userRole={user.role}
       />
-      <div className="flex-1 flex flex-col min-w-0">
+      
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <Navbar 
           user={user} 
           onLogout={handleLogout} 
           onRoleSwitch={handleRoleSwitch}
           toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} 
         />
-        <main className="p-4 md:p-8 overflow-y-auto max-h-[calc(100vh-64px)]">
-          {renderContent()}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden">
+          <div className="max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
         </main>
       </div>
     </div>

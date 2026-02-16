@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { UserRole } from '../types';
+import { UserRole } from '../types.ts';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,7 +10,7 @@ interface SidebarProps {
   userRole: UserRole;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, userRole }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, userRole }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { 
@@ -31,14 +31,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, user
 
   return (
     <aside 
-      className={`transition-all duration-300 bg-emerald-900 text-white flex flex-col h-screen sticky top-0 z-30 shadow-2xl ${
-        isOpen ? 'w-64' : 'w-20'
-      }`}
+      className={`
+        fixed inset-y-0 left-0 z-30 transition-all duration-300 transform bg-emerald-900 text-white flex flex-col h-screen shadow-2xl
+        md:relative md:translate-x-0
+        ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0 md:w-20'}
+      `}
     >
-      <div className={`p-6 flex items-center ${isOpen ? 'justify-start' : 'justify-center'}`}>
+      <div className={`p-6 flex items-center justify-between`}>
         <h2 className={`font-bold tracking-tight transition-all duration-300 ${isOpen ? 'text-2xl' : 'text-xl'}`}>
           {isOpen ? 'Magira CRM' : 'M'}
         </h2>
+        {/* Close button for mobile only */}
+        <button 
+          className="md:hidden text-emerald-300 hover:text-white"
+          onClick={() => setIsOpen(false)}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
       
       <nav className="flex-1 mt-4 px-3 space-y-2 overflow-y-auto no-scrollbar">
