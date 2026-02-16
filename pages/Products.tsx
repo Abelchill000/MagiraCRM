@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { db } from '../services/mockDb';
-import { Product, UserRole, State } from '../types';
+import { db } from '../services/mockDb.ts';
+import { Product, UserRole, State } from '../types.ts';
 
 const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [products, setProducts] = useState<Product[]>(db.getProducts());

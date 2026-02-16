@@ -1,21 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { db } from './services/mockDb';
-import { User, UserRole } from './types';
+import { db } from './services/mockDb.ts';
+import { User, UserRole } from './types.ts';
 
 // Pages
-import Dashboard from './pages/Dashboard';
-import Products from './pages/Products';
-import Orders from './pages/Orders';
-import Logistics from './pages/Logistics';
-import WhatsAppCenter from './pages/WhatsAppCenter';
-import Analytics from './pages/Analytics';
-import FormBuilder from './pages/FormBuilder';
-import WebLeads from './pages/WebLeads';
+import Dashboard from './pages/Dashboard.tsx';
+import Products from './pages/Products.tsx';
+import Orders from './pages/Orders.tsx';
+import Logistics from './pages/Logistics.tsx';
+import WhatsAppCenter from './pages/WhatsAppCenter.tsx';
+import Analytics from './pages/Analytics.tsx';
+import FormBuilder from './pages/FormBuilder.tsx';
+import WebLeads from './pages/WebLeads.tsx';
 
 // Components
-import Sidebar from './components/Sidebar';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar.tsx';
+import Navbar from './components/Navbar.tsx';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(db.getCurrentUser());

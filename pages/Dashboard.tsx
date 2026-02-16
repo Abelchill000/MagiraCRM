@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
-import { db } from '../services/mockDb';
-import { DeliveryStatus, LeadStatus, Order } from '../types';
+import { db } from '../services/mockDb.ts';
+import { DeliveryStatus, LeadStatus, Order } from '../types.ts';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
