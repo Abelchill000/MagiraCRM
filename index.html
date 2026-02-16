@@ -12,21 +12,32 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
+        margin: 0;
+        padding: 0;
       }
       /* Fallback for blank page */
       #root:empty::before {
-        content: 'Loading Magira CRM...';
+        content: 'Initializing Magira System...';
         display: flex;
         align-items: center;
-        justify-center: center;
+        justify-content: center;
         height: 100vh;
-        color: #64748b;
-        font-weight: 500;
+        width: 100vw;
+        background-color: #f8fafc;
+        color: #059669;
+        font-weight: 700;
+        font-size: 1.125rem;
+        letter-spacing: -0.025em;
       }
     </style>
     <script>
-      // Shim for process.env which some ESM builds of libraries expect
-      window.process = { env: { NODE_ENV: 'production' } };
+      // Global shim for libraries that expect process.env (common in ESM builds)
+      window.process = { 
+        env: { 
+          NODE_ENV: 'production'
+        },
+        cwd: () => '/'
+      };
     </script>
     <script type="importmap">
 {
@@ -35,7 +46,7 @@
     "react/": "https://esm.sh/react@19.0.0/",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.13.2?external=react,react-dom",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
   }
 }
