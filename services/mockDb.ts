@@ -110,6 +110,7 @@ class MockDb {
       }
     }
 
+    // Ensure all users have at least a fallback status
     parsed.users = parsed.users.map((u: any) => {
       if (!u.status) {
         u.status = u.isApproved ? 'approved' : 'pending';
@@ -142,7 +143,12 @@ class MockDb {
 
   // --- AUTH ---
   getCurrentUser() { return this.data.currentUser; }
-  getUsers() { this.sync(); return this.data.users; }
+  
+  getUsers() { 
+    this.sync(); 
+    // Always return a deep copy to prevent accidental mutations hiding data
+    return JSON.parse(JSON.stringify(this.data.users)); 
+  }
 
   register(name: string, email: string, password: string, role: UserRole) {
     this.sync();
@@ -174,11 +180,11 @@ class MockDb {
     this.sync(); // Force read back from localStorage
     const verifiedUser = this.data.users.find(u => u.email.toLowerCase() === cleanEmail);
     
-    if (!verifiedUser || verifiedUser.status !== 'pending') {
-      throw new Error('SYNC ERROR: Registration was sent but failed to finalize. Admin will NOT be able to approve you. Please try again or contact support.');
+    if (!verifiedUser) {
+      throw new Error('SYNC ERROR: Registration was sent but failed to finalize in database. The admin panel will NOT show your profile.');
     }
 
-    console.log('User registered & double-verified:', cleanEmail);
+    console.log('User registered & verified:', cleanEmail);
     return newUser;
   }
 
@@ -238,7 +244,7 @@ class MockDb {
   }
 
   // --- DATA OPERATIONS ---
-  getProducts() { this.sync(); return this.data.products; }
+  getProducts() { this.sync(); return JSON.parse(JSON.stringify(this.data.products)); }
   saveProduct(product: Product) {
     this.sync();
     const idx = this.data.products.findIndex(p => p.id === product.id);
@@ -247,7 +253,7 @@ class MockDb {
     this.save();
   }
   
-  getOrders() { this.sync(); return this.data.orders; }
+  getOrders() { this.sync(); return JSON.parse(JSON.stringify(this.data.orders)); }
   createOrder(order: Order) {
     this.sync();
     this.data.orders.push(order);
@@ -274,7 +280,7 @@ class MockDb {
     this.save();
   }
 
-  getStates() { this.sync(); return this.data.states; }
+  getStates() { this.sync(); return JSON.parse(JSON.stringify(this.data.states)); }
   saveState(state: State) {
     this.sync();
     const idx = this.data.states.findIndex(s => s.id === state.id);
@@ -283,7 +289,7 @@ class MockDb {
     this.save();
   }
 
-  getLogistics() { this.sync(); return this.data.logistics; }
+  getLogistics() { this.sync(); return JSON.parse(JSON.stringify(this.data.logistics)); }
   saveLogistics(partner: LogisticsPartner) {
     this.sync();
     const idx = this.data.logistics.findIndex(l => l.id === partner.id);
@@ -292,7 +298,7 @@ class MockDb {
     this.save();
   }
 
-  getForms() { this.sync(); return this.data.forms; }
+  getForms() { this.sync(); return JSON.parse(JSON.stringify(this.data.forms)); }
   saveForm(form: OrderForm) {
     this.sync();
     const idx = this.data.forms.findIndex(f => f.id === form.id);
@@ -301,7 +307,7 @@ class MockDb {
     this.save();
   }
 
-  getLeads() { this.sync(); return this.data.leads; }
+  getLeads() { this.sync(); return JSON.parse(JSON.stringify(this.data.leads)); }
   createLead(lead: WebLead) {
     this.sync();
     this.data.leads.push(lead);
