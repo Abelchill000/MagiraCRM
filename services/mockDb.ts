@@ -13,7 +13,7 @@ interface AppData {
   orders: Order[];
   forms: OrderForm[];
   leads: WebLead[];
-  users: User[]; // Persistent user list
+  users: User[];
   currentUser: User | null;
 }
 
@@ -55,8 +55,11 @@ const INITIAL_DATA: AppData = {
   currentUser: null
 };
 
+type Listener = () => void;
+
 class MockDb {
   private data: AppData;
+  private listeners: Set<Listener> = new Set();
 
   constructor() {
     this.data = this.load();
@@ -66,8 +69,18 @@ class MockDb {
     window.addEventListener('storage', (e) => {
       if (e.key === STORAGE_KEY) {
         this.data = this.load();
+        this.notify();
       }
     });
+  }
+
+  subscribe(listener: Listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notify() {
+    this.listeners.forEach(l => l());
   }
 
   private load(): AppData {
@@ -79,18 +92,15 @@ class MockDb {
 
   private save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+    this.notify();
   }
 
   private migrate() {
     let changed = false;
-    
-    // Ensure initial admin exists
     if (!this.data.users.find(u => u.email === 'admin@magiracrm.store')) {
        this.data.users.push(INITIAL_DATA.users[0]);
        changed = true;
     }
-
-    // Ensure all users have status and isApproved (integrity check)
     this.data.users = this.data.users.map(u => {
       if (!u.status) {
         u.status = u.isApproved ? 'approved' : 'pending';
@@ -98,11 +108,9 @@ class MockDb {
       }
       return u;
     });
-
     if (changed) this.save();
   }
 
-  // Refresh data before read-only operations to ensure latest from other tabs
   private sync() {
     this.data = this.load();
   }
@@ -139,11 +147,9 @@ class MockDb {
     this.sync();
     const user = this.data.users.find(u => u.email === email);
     if (!user) throw new Error('User not found');
-    
     if (user.password && password !== user.password) {
       throw new Error('Invalid password');
     }
-    
     if (user.status === 'pending') throw new Error('Account pending approval');
     if (user.status === 'rejected') throw new Error('Account access denied');
     
@@ -232,15 +238,12 @@ class MockDb {
     this.sync();
     const order = this.data.orders.find(o => o.id === orderId);
     if (!order) return;
-
     const oldStatus = order.deliveryStatus;
     order.deliveryStatus = status;
-    
     if (extra?.logisticsCost !== undefined) order.logisticsCost = extra.logisticsCost;
     if (extra?.rescheduleDate !== undefined) order.rescheduleDate = extra.rescheduleDate;
     if (extra?.rescheduleNotes !== undefined) order.rescheduleNotes = extra.rescheduleNotes;
     if (extra?.reminderEnabled !== undefined) order.reminderEnabled = extra.reminderEnabled;
-
     if (status === DeliveryStatus.DELIVERED && oldStatus !== DeliveryStatus.DELIVERED) {
       order.items.forEach(item => {
         const product = this.data.products.find(p => p.id === item.productId);
@@ -259,7 +262,6 @@ class MockDb {
     this.save();
   }
 
-  // Form Builder
   getForms() { this.sync(); return this.data.forms; }
   saveForm(form: OrderForm) {
     this.sync();
@@ -269,7 +271,6 @@ class MockDb {
     this.save();
   }
 
-  // Web Leads
   getLeads() { this.sync(); return this.data.leads; }
   createLead(lead: WebLead) {
     this.sync();
