@@ -68,30 +68,15 @@ class MockDb {
   private data: AppData;
 
   constructor() {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      this.data = saved ? JSON.parse(saved) : { ...INITIAL_DATA };
-    } catch (e) {
-      console.warn("Magira CRM: LocalStorage access restricted. Session data will not be persisted.", e);
-      this.data = { ...INITIAL_DATA };
-    }
-    
-    // Ensure all required fields exist for legacy data safety
-    if (!this.data.products) this.data.products = [...INITIAL_DATA.products];
-    if (!this.data.states) this.data.states = [...INITIAL_DATA.states];
-    if (!this.data.logistics) this.data.logistics = [...INITIAL_DATA.logistics];
-    if (!this.data.orders) this.data.orders = [];
+    const saved = localStorage.getItem(STORAGE_KEY);
+    this.data = saved ? JSON.parse(saved) : INITIAL_DATA;
+    // Ensure new fields exist for legacy data
     if (!this.data.forms) this.data.forms = [];
     if (!this.data.leads) this.data.leads = [];
   }
 
   private save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-    } catch (e) {
-      // Fail silently but log once
-      console.error("Magira CRM: Failed to save to LocalStorage", e);
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
   }
 
   // Auth

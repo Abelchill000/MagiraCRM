@@ -521,103 +521,115 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
            </div>
 
            {/* Preview Body */}
-           <div className="flex-1 overflow-y-auto p-4 md:p-10 flex items-start justify-center bg-[radial-gradient(#ffffff11_1px,transparent_1px)] [background-size:20px_20px]">
-              <div 
-                className={`bg-white shadow-2xl transition-all duration-500 ease-in-out origin-top ${
-                  previewDevice === 'mobile' ? 'w-[375px] rounded-[40px] border-[8px] border-slate-800' : 'w-full max-w-4xl rounded-2xl border border-white/10'
-                }`}
-                style={{ minHeight: previewDevice === 'mobile' ? '667px' : 'auto' }}
-              >
-                 {/* Mobile Camera Notch */}
-                 {previewDevice === 'mobile' && (
-                    <div className="w-full h-8 flex justify-center items-center">
-                       <div className="w-16 h-4 bg-slate-800 rounded-full"></div>
-                    </div>
-                 )}
-                 
-                 <div className={`p-0 ${previewDevice === 'mobile' ? 'max-h-[600px] overflow-y-auto' : ''}`}>
-                    <div className="flex flex-col gap-6 pb-12">
-                       {previewForm.sections.map(sec => {
-                          switch(sec.type) {
-                             case 'HEADER':
-                               return (
-                                  <div key={sec.id} style={{ backgroundColor: previewForm.themeColor }} className="p-10 text-white">
-                                     <h2 className="text-3xl font-black mb-3">{sec.label || previewForm.title}</h2>
-                                     <p className="opacity-90 text-sm leading-relaxed">{sec.content || previewForm.description}</p>
-                                  </div>
-                               );
-                             case 'CONTACT':
-                               return (
-                                 <div key={sec.id} className="px-10 space-y-4">
-                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{sec.label}</label>
-                                   <input disabled placeholder="Full Name" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm focus:outline-none" />
-                                   <input disabled placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm focus:outline-none" />
-                                 </div>
-                               );
-                             case 'PRODUCTS':
-                               return (
-                                  <div key={sec.id} className="px-10">
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
-                                     <div className="relative">
-                                        <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm appearance-none">
-                                           {previewForm.productIds.map(pid => (
-                                              <option key={pid}>{products.find(p => p.id === pid)?.name}</option>
-                                           ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
-                                     </div>
-                                  </div>
-                               );
-                             case 'LOCATION':
-                               return (
-                                  <div key={sec.id} className="px-10">
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
-                                     <div className="relative">
-                                        <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm appearance-none">
-                                           {states.map(s => <option key={s.id}>{s.name}</option>)}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
-                                     </div>
-                                  </div>
-                               );
-                             case 'ADDRESS':
-                               return (
-                                  <div key={sec.id} className="px-10">
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
-                                     <textarea disabled placeholder="Street, City, Area" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm" rows={2} />
-                                  </div>
-                               );
-                             case 'CUSTOM_TEXT':
-                               return (
-                                  <div key={sec.id} className="px-10">
-                                     <div className="bg-slate-50 p-4 rounded-xl border-l-4" style={{ borderColor: previewForm.themeColor }}>
-                                        <h4 className="text-sm font-bold text-slate-700">{sec.label}</h4>
-                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{sec.content}</p>
-                                     </div>
-                                  </div>
-                               );
-                             default: return null;
-                          }
-                       })}
-                       
-                       <div className="px-10 mt-6">
-                          <button 
-                             disabled 
-                             style={{ backgroundColor: previewForm.themeColor }}
-                             className="w-full text-white py-5 rounded-2xl font-black shadow-xl transition-all"
-                          >
-                             {previewForm.submitButtonText}
-                          </button>
-                          <p className="text-[9px] text-center text-slate-300 mt-6 uppercase font-bold tracking-widest">Powered by Magira Distribution CRM</p>
-                          
-                          {previewForm.thankYouUrl && (
-                            <div className="mt-8 p-3 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-bold text-center">
-                               🚀 REDIRECTS TO: {previewForm.thankYouUrl}
-                            </div>
-                          )}
-                       </div>
-                    </div>
-                 </div>
+           <div className="flex-1 overflow-y-auto p-4 md:p-8 flex items-center justify-center bg-[radial-gradient(#ffffff11_1px,transparent_1px)] [background-size:20px_20px]">
+              <div className="relative transition-all duration-500 ease-in-out flex items-center justify-center w-full h-full max-h-[90vh]">
+                <div 
+                  className={`bg-white shadow-2xl transition-all duration-500 ease-in-out origin-center flex flex-col ${
+                    previewDevice === 'mobile' 
+                      ? 'w-[375px] h-[760px] rounded-[3rem] border-[12px] border-slate-900 relative scale-[0.8] sm:scale-90 lg:scale-100' 
+                      : 'w-full max-w-5xl h-full rounded-2xl border border-white/10'
+                  }`}
+                >
+                   {/* Mobile Hardware Details */}
+                   {previewDevice === 'mobile' && (
+                      <>
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-10 flex items-center justify-center">
+                          <div className="w-8 h-1 bg-white/20 rounded-full"></div>
+                        </div>
+                        <div className="absolute -right-[14px] top-24 w-[3px] h-12 bg-slate-800 rounded-l-md"></div>
+                        <div className="absolute -left-[14px] top-20 w-[3px] h-10 bg-slate-800 rounded-r-md"></div>
+                        <div className="absolute -left-[14px] top-32 w-[3px] h-10 bg-slate-800 rounded-r-md"></div>
+                      </>
+                   )}
+                   
+                   <div className="flex-1 overflow-y-auto no-scrollbar rounded-[2rem] md:rounded-2xl bg-white">
+                      <div className="flex flex-col gap-6 pb-12">
+                         {previewForm.sections.map(sec => {
+                            switch(sec.type) {
+                               case 'HEADER':
+                                 return (
+                                    <div key={sec.id} style={{ backgroundColor: previewForm.themeColor }} className="p-8 md:p-12 text-white">
+                                       <h2 className="text-2xl md:text-4xl font-black mb-4 tracking-tight leading-tight">{sec.label || previewForm.title}</h2>
+                                       <p className="opacity-90 text-sm md:text-base leading-relaxed font-medium">{sec.content || previewForm.description}</p>
+                                    </div>
+                                 );
+                               case 'CONTACT':
+                                 return (
+                                   <div key={sec.id} className="px-8 md:px-12 space-y-4">
+                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{sec.label}</label>
+                                     <input disabled placeholder="Full Name" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm focus:outline-none placeholder:text-slate-300" />
+                                     <input disabled placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm focus:outline-none placeholder:text-slate-300" />
+                                   </div>
+                                 );
+                               case 'PRODUCTS':
+                                 return (
+                                    <div key={sec.id} className="px-8 md:px-12">
+                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                       <div className="relative">
+                                          <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
+                                             {previewForm.productIds.length > 0 ? (
+                                               previewForm.productIds.map(pid => (
+                                                  <option key={pid}>{products.find(p => p.id === pid)?.name}</option>
+                                               ))
+                                             ) : (
+                                               <option>No products selected</option>
+                                             )}
+                                          </select>
+                                          <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
+                                       </div>
+                                    </div>
+                                 );
+                               case 'LOCATION':
+                                 return (
+                                    <div key={sec.id} className="px-8 md:px-12">
+                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                       <div className="relative">
+                                          <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
+                                             {states.map(s => <option key={s.id}>{s.name}</option>)}
+                                          </select>
+                                          <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
+                                       </div>
+                                    </div>
+                                 );
+                               case 'ADDRESS':
+                                 return (
+                                    <div key={sec.id} className="px-8 md:px-12">
+                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                       <textarea disabled placeholder="Street, City, Area" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none placeholder:text-slate-300" rows={2} />
+                                    </div>
+                                 );
+                               case 'CUSTOM_TEXT':
+                                 return (
+                                    <div key={sec.id} className="px-8 md:px-12">
+                                       <div className="bg-slate-50 p-6 rounded-2xl border-l-4" style={{ borderColor: previewForm.themeColor }}>
+                                          <h4 className="text-sm font-bold text-slate-700">{sec.label}</h4>
+                                          <p className="text-xs text-slate-500 mt-2 leading-relaxed">{sec.content}</p>
+                                       </div>
+                                    </div>
+                                 );
+                               default: return null;
+                            }
+                         })}
+                         
+                         <div className="px-8 md:px-12 mt-4">
+                            <button 
+                               disabled 
+                               style={{ backgroundColor: previewForm.themeColor }}
+                               className="w-full text-white py-5 rounded-[1.25rem] font-black shadow-xl opacity-90"
+                            >
+                               {previewForm.submitButtonText}
+                            </button>
+                            <p className="text-[9px] text-center text-slate-300 mt-8 uppercase font-black tracking-[0.1em]">Magira Distribution CRM</p>
+                            
+                            {previewForm.thankYouUrl && (
+                              <div className="mt-8 p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-[10px] font-black text-center border border-emerald-100">
+                                 ✨ WILL REDIRECT TO: {previewForm.thankYouUrl}
+                              </div>
+                            )}
+                         </div>
+                      </div>
+                   </div>
+                </div>
               </div>
            </div>
         </div>
