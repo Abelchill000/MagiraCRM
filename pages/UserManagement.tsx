@@ -5,43 +5,40 @@ import { User } from '../types.ts';
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const refreshData = () => {
     const freshUsers = db.getUsers();
+    console.log('UserManagement Sync:', freshUsers.length, 'users found.');
     setUsers([...freshUsers]);
-    setLastUpdated(freshUsers.length > 0 ? new Date() : lastUpdated);
+    setLastUpdated(new Date());
   };
 
   useEffect(() => {
-    // Initial fetch
     refreshData();
-    
-    // Subscribe to DB changes (real-time updates from same or other tabs)
     const unsubscribe = db.subscribe(() => {
       refreshData();
     });
-
-    // Fallback interval
-    const interval = setInterval(refreshData, 10000);
-    
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
+    return () => unsubscribe();
   }, []);
 
   const pendingUsers = users.filter(u => u.status === 'pending');
   const activeUsers = users.filter(u => u.status === 'approved');
   const rejectedUsers = users.filter(u => u.status === 'rejected');
-  const unclassifiedUsers = users.filter(u => !['pending', 'approved', 'rejected'].includes(u.status));
 
   const handleApprove = (id: string) => {
     db.approveUser(id);
   };
 
   const handleReject = (id: string) => {
-    if (window.confirm("Are you sure you want to deny access to this user?")) {
+    if (window.confirm("Deny system access to this user?")) {
       db.rejectUser(id);
+    }
+  };
+
+  const handleClearData = () => {
+    if (window.confirm("CRITICAL: This will wipe EVERYTHING (Inventory, Orders, Leads). Only use for system reset. Continue?")) {
+      db.clearAllData();
     }
   };
 
@@ -49,24 +46,47 @@ const UserManagement: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Access Control</h1>
-          <p className="text-slate-500 text-sm">Review applications and manage the distribution team. ({users.length} total records found)</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Access Control</h1>
+          <p className="text-slate-500 text-sm">Review applications and manage the distribution team.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Synced</p>
-            <p className="text-[10px] font-bold text-emerald-600">{lastUpdated.toLocaleTimeString()}</p>
-          </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowDiagnostics(!showDiagnostics)}
+            className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase transition ${showDiagnostics ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}
+          >
+            {showDiagnostics ? 'Hide System Log' : 'Show System Log'}
+          </button>
           <button 
             onClick={refreshData}
             className="bg-white border border-slate-200 text-slate-500 p-2.5 rounded-xl hover:bg-slate-50 transition flex items-center gap-2 text-xs font-bold"
           >
-            <span>🔄</span> Force Refresh
+            <span>🔄</span> Sync Data
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
+        {/* Diagnostic Section */}
+        {showDiagnostics && (
+          <section className="bg-slate-900 text-emerald-400 p-6 rounded-3xl font-mono text-[10px] space-y-4">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <h3 className="font-bold uppercase">System Diagnostic Log</h3>
+              <span>Total Records: {users.length}</span>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {users.map((u, i) => (
+                <div key={u.id} className="border-b border-white/5 pb-1">
+                  [{i}] ID: {u.id} | EMAIL: {u.email} | STATUS: {u.status} | ROLE: {u.role}
+                </div>
+              ))}
+            </div>
+            <div className="pt-4 flex justify-between">
+              <p className="text-white/40 italic">New signups appear as "pending" automatically.</p>
+              <button onClick={handleClearData} className="text-red-400 hover:text-red-300 font-bold uppercase underline">Wipe Database (Hard Reset)</button>
+            </div>
+          </section>
+        )}
+
         {/* Pending Requests */}
         <section>
           <div className="flex items-center gap-2 mb-4">
@@ -77,7 +97,7 @@ const UserManagement: React.FC = () => {
             {pendingUsers.length === 0 ? (
               <div className="col-span-full p-12 bg-white rounded-3xl border-2 border-dashed border-slate-100 text-center text-slate-400">
                 <p className="text-xs font-bold uppercase tracking-widest">No pending applications</p>
-                <p className="text-[10px] mt-2 italic">New agent sign-ups will appear here instantly.</p>
+                <p className="text-[10px] mt-2 italic">New sign-ups will appear here instantly upon registration.</p>
               </div>
             ) : (
               pendingUsers.map(u => (
@@ -88,13 +108,13 @@ const UserManagement: React.FC = () => {
                         {u.name ? u.name.charAt(0) : '?'}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-800 leading-none">{u.name || 'Anonymous User'}</p>
+                        <p className="font-bold text-slate-800 leading-none">{u.name || 'User'}</p>
                         <p className="text-xs text-slate-400 mt-1">{u.email}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase">{u.role}</span>
-                      <span className="text-[9px] font-black bg-amber-50 text-amber-700 px-2 py-1 rounded uppercase">Review Needed</span>
+                      <span className="text-[9px] font-black bg-amber-50 text-amber-700 px-2 py-1 rounded uppercase">Pending</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2 pt-4 border-t border-slate-50">
@@ -102,7 +122,7 @@ const UserManagement: React.FC = () => {
                       onClick={() => handleReject(u.id)}
                       className="py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition"
                     >
-                      Deny Access
+                      Deny
                     </button>
                     <button 
                       onClick={() => handleApprove(u.id)}
@@ -117,21 +137,6 @@ const UserManagement: React.FC = () => {
           </div>
         </section>
 
-        {/* Unclassified/Error Users fallback */}
-        {unclassifiedUsers.length > 0 && (
-          <section className="bg-red-50 border border-red-100 p-4 rounded-2xl">
-             <h2 className="text-[10px] font-black text-red-700 uppercase mb-2">Integrity Alert: {unclassifiedUsers.length} Users with Invalid Status</h2>
-             <div className="space-y-1">
-                {unclassifiedUsers.map(u => (
-                  <div key={u.id} className="flex justify-between items-center text-xs">
-                    <span className="font-bold">{u.email}</span>
-                    <button onClick={() => handleApprove(u.id)} className="text-emerald-600 underline">Set to Approved</button>
-                  </div>
-                ))}
-             </div>
-          </section>
-        )}
-
         {/* Team Directory */}
         <section>
           <div className="flex items-center gap-2 mb-4">
@@ -145,20 +150,18 @@ const UserManagement: React.FC = () => {
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Member Details</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Designation</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">System Status</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Administrative Actions</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {[...activeUsers, ...rejectedUsers].length === 0 ? (
+                  {activeUsers.length === 0 && rejectedUsers.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-12 text-center text-slate-400 text-xs italic">
-                        No team members registered yet.
+                        No active members yet.
                       </td>
                     </tr>
                   ) : (
-                    [...activeUsers, ...rejectedUsers]
-                      .sort((a,b) => (b.registeredAt || '').localeCompare(a.registeredAt || ''))
-                      .map(u => (
+                    [...activeUsers, ...rejectedUsers].map(u => (
                       <tr key={u.id} className="hover:bg-slate-50/50 transition">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -181,14 +184,14 @@ const UserManagement: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                            {u.status === 'rejected' ? (
-                             <button onClick={() => handleApprove(u.id)} className="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition">Re-approve Access</button>
+                             <button onClick={() => handleApprove(u.id)} className="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition">Re-approve</button>
                            ) : (
                              <button 
                                onClick={() => handleReject(u.id)} 
                                disabled={u.email === 'admin@magiracrm.store'}
                                className={`text-[10px] font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition ${u.email === 'admin@magiracrm.store' ? 'opacity-0 pointer-events-none' : ''}`}
                              >
-                               Revoke Permission
+                               Revoke Access
                              </button>
                            )}
                         </td>

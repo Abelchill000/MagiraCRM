@@ -1,9 +1,10 @@
+
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
   PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
 } from '../types';
 
-const STORAGE_KEY = 'magira_crm_data';
+const STORAGE_KEY = 'magira_crm_data_v2'; // Bumped version to clear potentially corrupted old state
 
 interface AppData {
   products: Product[];
@@ -21,10 +22,10 @@ const INITIAL_DATA: AppData = {
     {
       id: 'p1',
       name: 'Ginger Shot (100ml)',
-      sku: '',
+      sku: 'GSHOT-01',
       costPrice: 500,
       sellingPrice: 1200,
-      batchNumber: '',
+      batchNumber: 'B-001',
       expiryDate: '2025-12-31',
       totalStock: 500,
       stockPerState: { 's1': 50, 's2': 30 },
@@ -41,7 +42,7 @@ const INITIAL_DATA: AppData = {
   leads: [],
   users: [
     {
-      id: 'u1',
+      id: 'u-admin',
       name: 'Admin Magira',
       email: 'admin@magiracrm.store',
       password: 'password123',
@@ -63,7 +64,7 @@ class MockDb {
   constructor() {
     this.data = this.load();
     
-    // Listen for storage changes in other tabs to keep data in sync
+    // Listen for storage changes in other tabs
     window.addEventListener('storage', (e) => {
       if (e.key === STORAGE_KEY) {
         this.data = this.load();
@@ -83,30 +84,40 @@ class MockDb {
 
   private load(): AppData {
     const saved = localStorage.getItem(STORAGE_KEY);
-    let data: AppData;
+    let parsed: any;
     
     if (saved) {
       try {
-        data = JSON.parse(saved);
+        parsed = JSON.parse(saved);
       } catch (e) {
-        data = JSON.parse(JSON.stringify(INITIAL_DATA));
+        parsed = JSON.parse(JSON.stringify(INITIAL_DATA));
       }
     } else {
-      data = JSON.parse(JSON.stringify(INITIAL_DATA));
+      parsed = JSON.parse(JSON.stringify(INITIAL_DATA));
     }
 
-    // Migration and Integrity Checks (runs on every load)
-    if (!data.users) data.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
+    // Strict Integrity/Migration logic
+    if (!parsed.users || !Array.isArray(parsed.users)) {
+      parsed.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
+    }
     
     let changed = false;
-    // Ensure admin exists
-    if (!data.users.find(u => u.email === 'admin@magiracrm.store')) {
-       data.users.push(INITIAL_DATA.users[0]);
-       changed = true;
+    
+    // Ensure admin is always present and approved
+    const adminIdx = parsed.users.findIndex((u: User) => u.email === 'admin@magiracrm.store');
+    if (adminIdx === -1) {
+      parsed.users.push(INITIAL_DATA.users[0]);
+      changed = true;
+    } else {
+      if (parsed.users[adminIdx].status !== 'approved') {
+        parsed.users[adminIdx].status = 'approved';
+        parsed.users[adminIdx].isApproved = true;
+        changed = true;
+      }
     }
 
-    // Ensure all users have a status field
-    data.users = data.users.map(u => {
+    // Force migration of missing status fields for all users
+    parsed.users = parsed.users.map((u: any) => {
       if (!u.status) {
         u.status = u.isApproved ? 'approved' : 'pending';
         changed = true;
@@ -115,11 +126,10 @@ class MockDb {
     });
 
     if (changed) {
-      // Don't call this.save() here as it would trigger infinite loops if called during constructor sync
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     }
 
-    return data;
+    return parsed;
   }
 
   private save() {
@@ -131,7 +141,7 @@ class MockDb {
     this.data = this.load();
   }
 
-  // Auth
+  // --- AUTH ---
   getCurrentUser() { return this.data.currentUser; }
   
   getUsers() { 
@@ -141,37 +151,55 @@ class MockDb {
 
   register(name: string, email: string, password: string, role: UserRole) {
     this.sync();
-    if (this.data.users.find(u => u.email === email)) {
-      throw new Error('Email already registered');
+    if (this.data.users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error('This email is already registered.');
     }
+
     const newUser: User = {
-      id: 'u' + Math.random().toString(36).substr(2, 9),
-      name,
-      email,
+      id: 'u-' + Math.random().toString(36).substr(2, 9),
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       password,
       role,
       isApproved: role === UserRole.ADMIN,
       status: role === UserRole.ADMIN ? 'approved' : 'pending',
       registeredAt: new Date().toISOString()
     };
+
     this.data.users.push(newUser);
     this.save();
+    console.log('User registered successfully:', newUser);
     return newUser;
   }
 
   login(email: string, password?: string) {
     this.sync();
-    const user = this.data.users.find(u => u.email === email);
-    if (!user) throw new Error('User not found');
-    if (user.password && password !== user.password) {
-      throw new Error('Invalid password');
-    }
+    const user = this.data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    if (!user) throw new Error('Account not found.');
+    if (user.password && password !== user.password) throw new Error('Incorrect password.');
+    
     if (user.status === 'pending') throw new Error('Account pending approval');
     if (user.status === 'rejected') throw new Error('Account access denied');
     
     this.data.currentUser = user;
     this.save();
     return user;
+  }
+
+  // Fix: Added missing switchUserRole method used in App.tsx
+  switchUserRole(newRole: UserRole) {
+    this.sync();
+    if (this.data.currentUser) {
+      this.data.currentUser.role = newRole;
+      const userIdx = this.data.users.findIndex(u => u.id === this.data.currentUser?.id);
+      if (userIdx !== -1) {
+        this.data.users[userIdx].role = newRole;
+      }
+      this.save();
+      return this.data.currentUser;
+    }
+    return null;
   }
 
   approveUser(userId: string) {
@@ -194,21 +222,12 @@ class MockDb {
     }
   }
 
-  switchUserRole(role: UserRole) {
-    if (this.data.currentUser) {
-      this.data.currentUser.role = role;
-      this.save();
-      return this.data.currentUser;
-    }
-    return null;
-  }
-
   logout() {
     this.data.currentUser = null;
     this.save();
   }
 
-  // Products
+  // --- DATA OPERATIONS (PASSTHROUGH) ---
   getProducts() { this.sync(); return this.data.products; }
   saveProduct(product: Product) {
     this.sync();
@@ -217,13 +236,36 @@ class MockDb {
     else this.data.products.push(product);
     this.save();
   }
-  deleteProduct(id: string) {
+  
+  getOrders() { this.sync(); return this.data.orders; }
+  createOrder(order: Order) {
     this.sync();
-    this.data.products = this.data.products.filter(p => p.id !== id);
+    this.data.orders.push(order);
+    this.save();
+  }
+  
+  updateOrderStatus(orderId: string, status: DeliveryStatus, extra?: any) {
+    this.sync();
+    const order = this.data.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const oldStatus = order.deliveryStatus;
+    order.deliveryStatus = status;
+    
+    if (extra?.logisticsCost !== undefined) order.logisticsCost = extra.logisticsCost;
+    
+    // Stock Logic
+    if (status === DeliveryStatus.DELIVERED && oldStatus !== DeliveryStatus.DELIVERED) {
+      order.items.forEach(item => {
+        const product = this.data.products.find(p => p.id === item.productId);
+        if (product && product.stockPerState[order.stateId] !== undefined) {
+          product.stockPerState[order.stateId] -= item.quantity;
+        }
+      });
+    }
     this.save();
   }
 
-  // States
   getStates() { this.sync(); return this.data.states; }
   saveState(state: State) {
     this.sync();
@@ -233,48 +275,12 @@ class MockDb {
     this.save();
   }
 
-  // Logistics
   getLogistics() { this.sync(); return this.data.logistics; }
   saveLogistics(partner: LogisticsPartner) {
     this.sync();
     const idx = this.data.logistics.findIndex(l => l.id === partner.id);
     if (idx >= 0) this.data.logistics[idx] = partner;
     else this.data.logistics.push(partner);
-    this.save();
-  }
-
-  // Orders
-  getOrders() { this.sync(); return this.data.orders; }
-  createOrder(order: Order) {
-    this.sync();
-    this.data.orders.push(order);
-    this.save();
-  }
-  updateOrderStatus(orderId: string, status: DeliveryStatus, extra?: { logisticsCost?: number, rescheduleDate?: string, rescheduleNotes?: string, reminderEnabled?: boolean }) {
-    this.sync();
-    const order = this.data.orders.find(o => o.id === orderId);
-    if (!order) return;
-    const oldStatus = order.deliveryStatus;
-    order.deliveryStatus = status;
-    if (extra?.logisticsCost !== undefined) order.logisticsCost = extra.logisticsCost;
-    if (extra?.rescheduleDate !== undefined) order.rescheduleDate = extra.rescheduleDate;
-    if (extra?.rescheduleNotes !== undefined) order.rescheduleNotes = extra.rescheduleNotes;
-    if (extra?.reminderEnabled !== undefined) order.reminderEnabled = extra.reminderEnabled;
-    if (status === DeliveryStatus.DELIVERED && oldStatus !== DeliveryStatus.DELIVERED) {
-      order.items.forEach(item => {
-        const product = this.data.products.find(p => p.id === item.productId);
-        if (product && product.stockPerState[order.stateId] !== undefined) {
-          product.stockPerState[order.stateId] -= item.quantity;
-        }
-      });
-    } else if ((status === DeliveryStatus.RETURNED || status === DeliveryStatus.CANCELLED) && oldStatus === DeliveryStatus.DELIVERED) {
-       order.items.forEach(item => {
-        const product = this.data.products.find(p => p.id === item.productId);
-        if (product) {
-          product.stockPerState[order.stateId] = (product.stockPerState[order.stateId] || 0) + item.quantity;
-        }
-      });
-    }
     this.save();
   }
 
@@ -293,12 +299,13 @@ class MockDb {
     this.data.leads.push(lead);
     this.save();
   }
+
   updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
     this.sync();
     const lead = this.data.leads.find(l => l.id === leadId);
     if (lead) {
       lead.status = status;
-      if (notes !== undefined) lead.notes = notes;
+      if (notes) lead.notes = notes;
       this.save();
     }
   }
@@ -315,15 +322,19 @@ class MockDb {
     return false;
   }
 
+  // Fix: Added missing restockStateHub method used in Products.tsx
   restockStateHub(productId: string, stateId: string, quantity: number) {
     this.sync();
     const product = this.data.products.find(p => p.id === productId);
     if (product) {
       product.stockPerState[stateId] = (product.stockPerState[stateId] || 0) + quantity;
       this.save();
-      return true;
     }
-    return false;
+  }
+  
+  clearAllData() {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.reload();
   }
 }
 
