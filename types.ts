@@ -125,4 +125,7 @@ export interface User {
   email: string;
   role: UserRole;
   stateId?: string;
+  isApproved: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  registeredAt: string;
 }

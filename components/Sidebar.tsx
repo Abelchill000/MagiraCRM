@@ -23,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'orders', label: 'Orders', icon: '🛒', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'formbuilder', label: 'Form Builder', icon: '🧱', roles: [UserRole.ADMIN] },
     { id: 'logistics', label: 'Logistics', icon: '🚚', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] },
+    { id: 'users', label: 'User Approvals', icon: '👤', roles: [UserRole.ADMIN] },
     { id: 'whatsapp', label: 'WhatsApp Hub', icon: '📱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
   ];
@@ -41,7 +42,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
         <h2 className={`font-bold tracking-tight transition-all duration-300 ${isOpen ? 'text-2xl' : 'text-xl'}`}>
           {isOpen ? 'Magira CRM' : 'M'}
         </h2>
-        {/* Close button for mobile only */}
         <button 
           className="md:hidden text-slate-400 hover:text-white p-2"
           onClick={() => setIsOpen(false)}

@@ -13,6 +13,7 @@ interface AppData {
   orders: Order[];
   forms: OrderForm[];
   leads: WebLead[];
+  users: User[]; // Persistent user list
   currentUser: User | null;
 }
 
@@ -29,39 +30,28 @@ const INITIAL_DATA: AppData = {
       totalStock: 500,
       stockPerState: { 's1': 50, 's2': 30 },
       lowStockThreshold: 10
-    },
-    {
-      id: 'p2',
-      name: 'Beet Root Shot (100ml)',
-      sku: '',
-      costPrice: 600,
-      sellingPrice: 1500,
-      batchNumber: '',
-      expiryDate: '2025-10-15',
-      totalStock: 300,
-      stockPerState: { 's1': 20, 's2': 40 },
-      lowStockThreshold: 10
     }
   ],
   states: [
     { id: 's1', name: 'Lagos', whatsappGroupLink: 'https://chat.whatsapp.com/example-lagos' },
-    { id: 's2', name: 'Abuja', whatsappGroupLink: 'https://chat.whatsapp.com/example-abuja' },
-    { id: 's3', name: 'Kano', whatsappGroupLink: 'https://chat.whatsapp.com/example-kano' },
-    { id: 's4', name: 'Rivers', whatsappGroupLink: 'https://chat.whatsapp.com/example-rivers' }
+    { id: 's2', name: 'Abuja', whatsappGroupLink: 'https://chat.whatsapp.com/example-abuja' }
   ],
-  logistics: [
-    { id: 'l1', name: 'GIG Logistics', stateId: 's1', contactPerson: 'John Doe', phone: '08012345678' },
-    { id: 'l2', name: 'Speedaf', stateId: 's2', contactPerson: 'Jane Smith', phone: '08087654321' }
-  ],
+  logistics: [],
   orders: [],
   forms: [],
   leads: [],
-  currentUser: {
-    id: 'u1',
-    name: 'Admin Magira',
-    email: 'admin@magira.com',
-    role: UserRole.ADMIN
-  }
+  users: [
+    {
+      id: 'u1',
+      name: 'Admin Magira',
+      email: 'admin@magira.com',
+      role: UserRole.ADMIN,
+      isApproved: true,
+      status: 'approved',
+      registeredAt: new Date().toISOString()
+    }
+  ],
+  currentUser: null
 };
 
 class MockDb {
@@ -70,9 +60,7 @@ class MockDb {
   constructor() {
     const saved = localStorage.getItem(STORAGE_KEY);
     this.data = saved ? JSON.parse(saved) : INITIAL_DATA;
-    // Ensure new fields exist for legacy data
-    if (!this.data.forms) this.data.forms = [];
-    if (!this.data.leads) this.data.leads = [];
+    if (!this.data.users) this.data.users = INITIAL_DATA.users;
   }
 
   private save() {
@@ -81,16 +69,56 @@ class MockDb {
 
   // Auth
   getCurrentUser() { return this.data.currentUser; }
-  login(role: UserRole) {
-    this.data.currentUser = {
+  
+  getUsers() { return this.data.users; }
+
+  register(name: string, email: string, role: UserRole) {
+    if (this.data.users.find(u => u.email === email)) {
+      throw new Error('Email already registered');
+    }
+    const newUser: User = {
       id: 'u' + Math.random().toString(36).substr(2, 9),
-      name: `${role} User`,
-      email: `${role.toLowerCase().replace(' ', '')}@magira.com`,
-      role
+      name,
+      email,
+      role,
+      isApproved: role === UserRole.ADMIN, // Admin auto-approved for demo purposes
+      status: role === UserRole.ADMIN ? 'approved' : 'pending',
+      registeredAt: new Date().toISOString()
     };
+    this.data.users.push(newUser);
     this.save();
-    return this.data.currentUser;
+    return newUser;
   }
+
+  login(email: string) {
+    const user = this.data.users.find(u => u.email === email);
+    if (!user) throw new Error('User not found');
+    if (user.status === 'pending') throw new Error('Account pending approval');
+    if (user.status === 'rejected') throw new Error('Account access denied');
+    
+    this.data.currentUser = user;
+    this.save();
+    return user;
+  }
+
+  approveUser(userId: string) {
+    const user = this.data.users.find(u => u.id === userId);
+    if (user) {
+      user.isApproved = true;
+      user.status = 'approved';
+      this.save();
+    }
+  }
+
+  rejectUser(userId: string) {
+    const user = this.data.users.find(u => u.id === userId);
+    if (user) {
+      user.isApproved = false;
+      user.status = 'rejected';
+      this.save();
+    }
+  }
+
   switchUserRole(role: UserRole) {
     if (this.data.currentUser) {
       this.data.currentUser.role = role;
@@ -99,6 +127,7 @@ class MockDb {
     }
     return null;
   }
+
   logout() {
     this.data.currentUser = null;
     this.save();
@@ -148,25 +177,12 @@ class MockDb {
     const oldStatus = order.deliveryStatus;
     order.deliveryStatus = status;
     
-    if (extra?.logisticsCost !== undefined) {
-      order.logisticsCost = extra.logisticsCost;
-    }
+    if (extra?.logisticsCost !== undefined) order.logisticsCost = extra.logisticsCost;
+    if (extra?.rescheduleDate !== undefined) order.rescheduleDate = extra.rescheduleDate;
+    if (extra?.rescheduleNotes !== undefined) order.rescheduleNotes = extra.rescheduleNotes;
+    if (extra?.reminderEnabled !== undefined) order.reminderEnabled = extra.reminderEnabled;
 
-    if (extra?.rescheduleDate !== undefined) {
-      order.rescheduleDate = extra.rescheduleDate;
-    }
-
-    if (extra?.rescheduleNotes !== undefined) {
-      order.rescheduleNotes = extra.rescheduleNotes;
-    }
-
-    if (extra?.reminderEnabled !== undefined) {
-      order.reminderEnabled = extra.reminderEnabled;
-    }
-
-    // Stock Logic
     if (status === DeliveryStatus.DELIVERED && oldStatus !== DeliveryStatus.DELIVERED) {
-      // Deduct stock when marked as delivered
       order.items.forEach(item => {
         const product = this.data.products.find(p => p.id === item.productId);
         if (product && product.stockPerState[order.stateId] !== undefined) {
@@ -174,7 +190,6 @@ class MockDb {
         }
       });
     } else if ((status === DeliveryStatus.RETURNED || status === DeliveryStatus.CANCELLED) && oldStatus === DeliveryStatus.DELIVERED) {
-       // Return stock if it was previously delivered but now cancelled or returned
        order.items.forEach(item => {
         const product = this.data.products.find(p => p.id === item.productId);
         if (product) {
@@ -182,7 +197,6 @@ class MockDb {
         }
       });
     }
-
     this.save();
   }
 
@@ -192,10 +206,6 @@ class MockDb {
     const idx = this.data.forms.findIndex(f => f.id === form.id);
     if (idx >= 0) this.data.forms[idx] = form;
     else this.data.forms.push(form);
-    this.save();
-  }
-  deleteForm(id: string) {
-    this.data.forms = this.data.forms.filter(f => f.id !== id);
     this.save();
   }
 
@@ -214,7 +224,6 @@ class MockDb {
     }
   }
 
-  // Stock Transfer Logic
   transferStock(productId: string, stateId: string, quantity: number) {
     const product = this.data.products.find(p => p.id === productId);
     if (product && product.totalStock >= quantity) {
