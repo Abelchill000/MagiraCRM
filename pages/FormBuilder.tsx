@@ -1,0 +1,629 @@
+
+import React, { useState } from 'react';
+import { db } from '../services/mockDb';
+import { OrderForm, Product, State, FormSection, SectionType } from '../types';
+
+const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
+  HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
+  CONTACT: { label: 'Customer Information' },
+  PRODUCTS: { label: 'Select Your Products' },
+  LOCATION: { label: 'Delivery State' },
+  ADDRESS: { label: 'Street Address' },
+  CUSTOM_TEXT: { label: 'Special Instructions', content: 'Please note that delivery takes 24-48 hours.' },
+};
+
+const FormBuilder: React.FC = () => {
+  const [forms, setForms] = useState<OrderForm[]>(db.getForms());
+  const [products] = useState<Product[]>(db.getProducts());
+  const [states] = useState<State[]>(db.getStates());
+  const [showModal, setShowModal] = useState(false);
+  const [editingForm, setEditingForm] = useState<Partial<OrderForm> | null>(null);
+  const [previewForm, setPreviewForm] = useState<OrderForm | null>(null);
+  const [showCodeModal, setShowCodeModal] = useState<OrderForm | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
+
+  const handleSave = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingForm) return;
+
+    const form: OrderForm = {
+      id: editingForm.id || 'form-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+      title: editingForm.title || 'New Order Form',
+      description: editingForm.description || '',
+      productIds: editingForm.productIds || [],
+      themeColor: editingForm.themeColor || '#10b981',
+      createdAt: editingForm.createdAt || new Date().toISOString(),
+      isActive: editingForm.isActive ?? true,
+      sections: editingForm.sections || [
+        { id: 'sec-1', type: 'HEADER', label: 'Order Form', content: 'Fill the details below.' },
+        { id: 'sec-2', type: 'CONTACT' },
+        { id: 'sec-3', type: 'PRODUCTS' },
+        { id: 'sec-4', type: 'ADDRESS' }
+      ],
+      submitButtonText: editingForm.submitButtonText || 'Place Order Now',
+      successMessage: editingForm.successMessage || 'Thank you! Your order request has been received.',
+      thankYouUrl: editingForm.thankYouUrl || '',
+    };
+
+    db.saveForm(form);
+    setForms([...db.getForms()]);
+    setShowModal(false);
+    setEditingForm(null);
+  };
+
+  const addSection = (type: SectionType) => {
+    const newSection: FormSection = {
+      id: 'sec-' + Math.random().toString(36).substr(2, 5),
+      type,
+      ...SECTION_DEFAULTS[type]
+    };
+    const currentSections = editingForm?.sections || [];
+    setEditingForm({ ...editingForm, sections: [...currentSections, newSection] });
+  };
+
+  const removeSection = (id: string) => {
+    const updated = (editingForm?.sections || []).filter(s => s.id !== id);
+    setEditingForm({ ...editingForm, sections: updated });
+  };
+
+  const moveSection = (index: number, direction: 'up' | 'down') => {
+    const sections = [...(editingForm?.sections || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sections.length) return;
+    
+    [sections[index], sections[targetIndex]] = [sections[targetIndex], sections[index]];
+    setEditingForm({ ...editingForm, sections });
+  };
+
+  const toggleProduct = (pid: string) => {
+    const current = editingForm?.productIds || [];
+    const updated = current.includes(pid) 
+      ? current.filter(id => id !== pid) 
+      : [...current, pid];
+    setEditingForm({ ...editingForm, productIds: updated });
+  };
+
+  const getEmbedCode = (form: OrderForm) => {
+    const productOptions = form.productIds.map(id => {
+      const p = products.find(prod => prod.id === id);
+      return `<option value="${id}">${p?.name} - ₦${p?.sellingPrice.toLocaleString()}</option>`;
+    }).join('\n            ');
+
+    const stateOptions = states.map(s => `<option value="${s.id}">${s.name}</option>`).join('\n            ');
+
+    const sectionsHtml = form.sections.map(sec => {
+      switch (sec.type) {
+        case 'HEADER':
+          return `
+    <div style="background-color: ${form.themeColor}; padding: 24px; color: white;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 800;">${sec.label || form.title}</h2>
+      <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">${sec.content || form.description}</p>
+    </div>`;
+        case 'CONTACT':
+          return `
+    <div style="padding: 0 24px;">
+      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'Contact Info'}</label>
+      <input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; margin-bottom: 12px;">
+      <input type="tel" name="phone" placeholder="Phone Number" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box;">
+    </div>`;
+        case 'PRODUCTS':
+          return `
+    <div style="padding: 0 24px;">
+      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'Products'}</label>
+      <select name="productId" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
+        <option value="">-- Select Option --</option>
+        ${productOptions}
+      </select>
+    </div>`;
+        case 'LOCATION':
+          return `
+    <div style="padding: 0 24px;">
+      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'State'}</label>
+      <select name="stateId" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
+        <option value="">-- Select State --</option>
+        ${stateOptions}
+      </select>
+    </div>`;
+        case 'ADDRESS':
+          return `
+    <div style="padding: 0 24px;">
+      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'Address'}</label>
+      <textarea name="address" required rows="2" placeholder="Full Delivery Address" style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-family: sans-serif;"></textarea>
+    </div>`;
+        case 'CUSTOM_TEXT':
+          return `
+    <div style="padding: 0 24px;">
+       <h4 style="margin: 0; font-size: 13px; color: #334155;">${sec.label}</h4>
+       <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.5;">${sec.content}</p>
+    </div>`;
+        default: return '';
+      }
+    }).join('\n');
+
+    return `<!-- Magira Lead Capture: ${form.title} -->
+<div id="magira-container-${form.id}" style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 20px auto; border: 1px solid #f1f5f9; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);">
+  <form id="magira-form-${form.id}" style="display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px;">
+    ${sectionsHtml}
+    
+    <div style="padding: 0 24px;">
+      <button type="submit" style="width: 100%; background-color: ${form.themeColor}; color: white; border: none; padding: 16px; border-radius: 14px; font-weight: 800; font-size: 15px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px ${form.themeColor}33;">
+        ${form.submitButtonText}
+      </button>
+      <p style="text-align: center; margin: 12px 0 0 0; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Powered by Magira Distribution CRM</p>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('magira-form-${form.id}').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const data = Object.fromEntries(formData.entries());
+  const btn = this.querySelector('button');
+  
+  btn.disabled = true;
+  btn.innerText = 'Processing Order...';
+  
+  console.log('Lead Captured:', data);
+  
+  setTimeout(() => {
+    const thankYouUrl = "${form.thankYouUrl || ''}";
+    if (thankYouUrl) {
+      window.location.href = thankYouUrl;
+    } else {
+      document.getElementById('magira-container-${form.id}').innerHTML = \`
+        <div style="padding: 60px 40px; text-align: center; color: #1e293b;">
+          <div style="font-size: 60px; margin-bottom: 24px;">🎉</div>
+          <h3 style="margin: 0 0 12px 0; font-size: 22px; font-weight: 800;">Submission Sent!</h3>
+          <p style="color: #64748b; font-size: 14px; line-height: 1.6;">${form.successMessage}</p>
+        </div>
+      \`;
+    }
+  }, 1200);
+});
+</script>`;
+  };
+
+  const handlePreviewUnsaved = () => {
+    if (!editingForm) return;
+    const tempForm: OrderForm = {
+      id: editingForm.id || 'PREVIEW-TEMP',
+      title: editingForm.title || 'Preview Form',
+      description: editingForm.description || '',
+      productIds: editingForm.productIds || [],
+      themeColor: editingForm.themeColor || '#10b981',
+      createdAt: new Date().toISOString(),
+      isActive: true,
+      sections: editingForm.sections || [],
+      submitButtonText: editingForm.submitButtonText || 'Place Order Now',
+      successMessage: editingForm.successMessage || 'Success!',
+      thankYouUrl: editingForm.thankYouUrl || ''
+    };
+    setPreviewForm(tempForm);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Form Builder</h1>
+          <p className="text-slate-500">Manually construct forms with draggable sections and custom fields.</p>
+        </div>
+        <button 
+          onClick={() => { setEditingForm({ 
+            productIds: [], 
+            themeColor: '#10b981', 
+            sections: [
+               { id: 'sec-1', type: 'HEADER', label: 'Order Form', content: 'Fresh shots available now.' },
+               { id: 'sec-2', type: 'CONTACT' },
+               { id: 'sec-3', type: 'PRODUCTS' },
+               { id: 'sec-4', type: 'ADDRESS' }
+            ],
+            submitButtonText: 'Place Order Now',
+            successMessage: 'Thank you! Your order request has been received.',
+            thankYouUrl: '',
+          }); setShowModal(true); }}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition"
+        >
+          + Create Custom Form
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {forms.map(form => (
+          <div key={form.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition">
+            <div className="h-2" style={{ backgroundColor: form.themeColor }}></div>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold text-slate-800 text-lg">{form.title || 'Untitled Form'}</h3>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${form.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {form.isActive ? 'Active' : 'Draft'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-4">Form Structure</p>
+              <div className="flex flex-wrap gap-1 mt-2 mb-6">
+                {(form.sections || []).map(s => (
+                   <span key={s.id} className="text-[9px] font-black bg-slate-50 text-slate-500 border border-slate-100 px-2 py-1 rounded-full">{s.type}</span>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={() => setPreviewForm(form)}
+                  className="bg-slate-50 hover:bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold transition"
+                >
+                  Preview Mode
+                </button>
+                <button 
+                  onClick={() => { setEditingForm(form); setShowModal(true); }}
+                  className="bg-slate-50 hover:bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold transition"
+                >
+                  Edit Layout
+                </button>
+                <button 
+                  onClick={() => setShowCodeModal(form)}
+                  className="col-span-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <span>📋</span> Get Embed Code
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Code Viewer Modal */}
+      {showCodeModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[70]">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Embed Lead Form</h2>
+                <p className="text-xs text-slate-500">Copy the code below to start capturing orders.</p>
+              </div>
+              <button onClick={() => setShowCodeModal(null)} className="text-slate-400 hover:text-slate-600 bg-white w-8 h-8 rounded-full flex items-center justify-center shadow-sm">✕</button>
+            </div>
+            <div className="p-8 space-y-4">
+              <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-x-auto max-h-[400px] leading-relaxed font-mono relative group">
+                {getEmbedCode(showCodeModal)}
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(getEmbedCode(showCodeModal));
+                    alert('Code copied!');
+                  }}
+                  className="absolute top-4 right-4 bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  COPY
+                </button>
+              </pre>
+              <button 
+                onClick={() => setShowCodeModal(null)}
+                className="w-full bg-slate-800 text-white py-4 rounded-2xl font-bold hover:bg-slate-900 transition"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Layout Editor Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col md:flex-row h-[85vh]">
+            {/* Sidebar Controls */}
+            <div className="w-full md:w-80 bg-slate-50 border-r border-slate-100 p-6 overflow-y-auto">
+              <h2 className="text-lg font-black text-slate-800 mb-6">Form Components</h2>
+              <div className="space-y-2">
+                {(['HEADER', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS', 'CUSTOM_TEXT'] as SectionType[]).map(type => (
+                  <button 
+                    key={type}
+                    onClick={() => addSection(type)}
+                    className="w-full bg-white border border-slate-200 p-3 rounded-xl text-left hover:border-emerald-500 transition-all flex items-center gap-3 group"
+                  >
+                    <span className="bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
+                    <div>
+                       <p className="text-xs font-bold text-slate-700">{type.replace('_', ' ')}</p>
+                       <p className="text-[10px] text-slate-400">Add to layout</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="mt-10 pt-6 border-t border-slate-200">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Form Theme</label>
+                <div className="flex items-center gap-3 bg-white border border-slate-200 p-2 rounded-xl">
+                  <input 
+                    type="color"
+                    className="w-8 h-8 rounded cursor-pointer border-none bg-transparent"
+                    value={editingForm?.themeColor || '#10b981'}
+                    onChange={e => setEditingForm({...editingForm, themeColor: e.target.value})}
+                  />
+                  <span className="text-[10px] font-mono font-bold text-slate-500">{editingForm?.themeColor}</span>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Product Catalog</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {products.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => toggleProduct(p.id)}
+                      className={`text-[10px] font-bold p-2 rounded-lg border text-left truncate ${
+                        editingForm?.productIds?.includes(p.id) 
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700' 
+                          : 'bg-white border-slate-200 text-slate-500'
+                      }`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Main Canvas */}
+            <div className="flex-1 flex flex-col bg-slate-100/50 p-6 overflow-y-auto">
+               <div className="max-w-xl mx-auto w-full space-y-4">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Form Internal Name</label>
+                     <input 
+                        className="w-full text-xl font-bold border-none p-0 focus:ring-0 placeholder-slate-300"
+                        placeholder="Lead Capture Name..."
+                        value={editingForm?.title || ''}
+                        onChange={e => setEditingForm({...editingForm, title: e.target.value})}
+                     />
+                  </div>
+
+                  <div className="space-y-3">
+                    {(editingForm?.sections || []).map((section, idx) => (
+                      <div key={section.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm group relative animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between mb-4">
+                           <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-black bg-slate-800 text-white px-2 py-0.5 rounded uppercase">{section.type}</span>
+                              <input 
+                                className="text-sm font-bold border-none p-0 focus:ring-0 bg-transparent w-40"
+                                value={section.label || ''}
+                                onChange={e => {
+                                  const updated = [...(editingForm?.sections || [])];
+                                  updated[idx].label = e.target.value;
+                                  setEditingForm({...editingForm, sections: updated});
+                                }}
+                                placeholder="Section Label"
+                              />
+                           </div>
+                           <div className="flex items-center gap-1">
+                              <button onClick={() => moveSection(idx, 'up')} className="p-1 hover:bg-slate-50 rounded text-slate-400 text-xs">↑</button>
+                              <button onClick={() => moveSection(idx, 'down')} className="p-1 hover:bg-slate-50 rounded text-slate-400 text-xs">↓</button>
+                              <button onClick={() => removeSection(section.id)} className="p-1 hover:bg-red-50 rounded text-red-400 text-xs ml-2">✕</button>
+                           </div>
+                        </div>
+
+                        {(section.type === 'HEADER' || section.type === 'CUSTOM_TEXT') && (
+                          <textarea 
+                            className="w-full text-xs bg-slate-50 border-none rounded-xl p-3 focus:ring-1 focus:ring-emerald-500"
+                            rows={2}
+                            value={section.content || ''}
+                            onChange={e => {
+                              const updated = [...(editingForm?.sections || [])];
+                              updated[idx].content = e.target.value;
+                              setEditingForm({...editingForm, sections: updated});
+                            }}
+                            placeholder="Add descriptive content here..."
+                          />
+                        )}
+
+                        {(section.type === 'CONTACT' || section.type === 'PRODUCTS' || section.type === 'ADDRESS' || section.type === 'LOCATION') && (
+                           <div className="bg-slate-50 h-10 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic {section.type} Field Block</span>
+                           </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {(editingForm?.sections || []).length === 0 && (
+                      <div className="text-center py-10 text-slate-400 text-xs font-bold border-2 border-dashed rounded-3xl bg-white border-slate-200">
+                         DRAG COMPONENTS HERE OR CLICK BUTTONS ON SIDEBAR
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-8">
+                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Button Label</label>
+                        <input 
+                           className="w-full text-xs font-bold bg-slate-50 border-none rounded-lg p-2"
+                           value={editingForm?.submitButtonText || ''}
+                           onChange={e => setEditingForm({...editingForm, submitButtonText: e.target.value})}
+                        />
+                     </div>
+                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Success Msg</label>
+                        <input 
+                           className="w-full text-xs font-bold bg-slate-50 border-none rounded-lg p-2"
+                           value={editingForm?.successMessage || ''}
+                           onChange={e => setEditingForm({...editingForm, successMessage: e.target.value})}
+                        />
+                     </div>
+                     <div className="col-span-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Custom Thank You Page URL (Optional)</label>
+                        <input 
+                           className="w-full text-xs font-bold bg-slate-50 border-none rounded-lg p-2 placeholder:font-normal"
+                           value={editingForm?.thankYouUrl || ''}
+                           onChange={e => setEditingForm({...editingForm, thankYouUrl: e.target.value})}
+                           placeholder="https://yourwebsite.com/thank-you"
+                        />
+                        <p className="text-[9px] text-slate-400 mt-2">If provided, users will be redirected here after submission instead of seeing the success message.</p>
+                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-8">
+                    <button onClick={() => setShowModal(false)} className="text-slate-400 font-bold text-xs uppercase hover:text-slate-600 transition">Discard Changes</button>
+                    
+                    <div className="flex items-center gap-3">
+                      <button 
+                        type="button"
+                        onClick={handlePreviewUnsaved}
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition"
+                      >
+                        👁️ Preview Layout
+                      </button>
+                      <button 
+                        onClick={() => handleSave()} 
+                        className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition"
+                      >
+                        Save Form Structure
+                      </button>
+                    </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real-time Preview Mode */}
+      {previewForm && (
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl flex flex-col z-[100] animate-in fade-in duration-300">
+           {/* Preview Toolbar */}
+           <div className="h-16 bg-slate-950 border-b border-white/10 flex items-center justify-between px-6 shrink-0">
+              <div className="flex items-center gap-4">
+                 <button onClick={() => setPreviewForm(null)} className="text-white/50 hover:text-white transition p-2">
+                    <span className="text-xl">←</span> Back to Editor
+                 </button>
+                 <div className="h-4 w-[1px] bg-white/10 hidden sm:block"></div>
+                 <span className="text-xs font-bold text-white/40 uppercase tracking-widest hidden sm:block">Previewing: {previewForm.title}</span>
+              </div>
+
+              <div className="flex items-center bg-white/5 p-1 rounded-xl">
+                 <button 
+                    onClick={() => setPreviewDevice('desktop')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${previewDevice === 'desktop' ? 'bg-white text-slate-950 shadow-lg' : 'text-white/40 hover:text-white'}`}
+                 >
+                    🖥️ Desktop
+                 </button>
+                 <button 
+                    onClick={() => setPreviewDevice('mobile')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${previewDevice === 'mobile' ? 'bg-white text-slate-950 shadow-lg' : 'text-white/40 hover:text-white'}`}
+                 >
+                    📱 Mobile
+                 </button>
+              </div>
+
+              <button 
+                onClick={() => { setPreviewForm(null); setShowCodeModal(previewForm); }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-emerald-900/20"
+              >
+                Get Code
+              </button>
+           </div>
+
+           {/* Preview Body */}
+           <div className="flex-1 overflow-y-auto p-4 md:p-10 flex items-start justify-center bg-[radial-gradient(#ffffff11_1px,transparent_1px)] [background-size:20px_20px]">
+              <div 
+                className={`bg-white shadow-2xl transition-all duration-500 ease-in-out origin-top ${
+                  previewDevice === 'mobile' ? 'w-[375px] rounded-[40px] border-[8px] border-slate-800' : 'w-full max-w-4xl rounded-2xl border border-white/10'
+                }`}
+                style={{ minHeight: previewDevice === 'mobile' ? '667px' : 'auto' }}
+              >
+                 {/* Mobile Camera Notch */}
+                 {previewDevice === 'mobile' && (
+                    <div className="w-full h-8 flex justify-center items-center">
+                       <div className="w-16 h-4 bg-slate-800 rounded-full"></div>
+                    </div>
+                 )}
+                 
+                 <div className={`p-0 ${previewDevice === 'mobile' ? 'max-h-[600px] overflow-y-auto' : ''}`}>
+                    <div className="flex flex-col gap-6 pb-12">
+                       {previewForm.sections.map(sec => {
+                          switch(sec.type) {
+                             case 'HEADER':
+                               return (
+                                  <div key={sec.id} style={{ backgroundColor: previewForm.themeColor }} className="p-10 text-white">
+                                     <h2 className="text-3xl font-black mb-3">{sec.label || previewForm.title}</h2>
+                                     <p className="opacity-90 text-sm leading-relaxed">{sec.content || previewForm.description}</p>
+                                  </div>
+                               );
+                             case 'CONTACT':
+                               return (
+                                 <div key={sec.id} className="px-10 space-y-4">
+                                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{sec.label}</label>
+                                   <input disabled placeholder="Full Name" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm focus:outline-none" />
+                                   <input disabled placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm focus:outline-none" />
+                                 </div>
+                               );
+                             case 'PRODUCTS':
+                               return (
+                                  <div key={sec.id} className="px-10">
+                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                     <div className="relative">
+                                        <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm appearance-none">
+                                           {previewForm.productIds.map(pid => (
+                                              <option key={pid}>{products.find(p => p.id === pid)?.name}</option>
+                                           ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
+                                     </div>
+                                  </div>
+                               );
+                             case 'LOCATION':
+                               return (
+                                  <div key={sec.id} className="px-10">
+                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                     <div className="relative">
+                                        <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm appearance-none">
+                                           {states.map(s => <option key={s.id}>{s.name}</option>)}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">▼</div>
+                                     </div>
+                                  </div>
+                               );
+                             case 'ADDRESS':
+                               return (
+                                  <div key={sec.id} className="px-10">
+                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                     <textarea disabled placeholder="Street, City, Area" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-sm" rows={2} />
+                                  </div>
+                               );
+                             case 'CUSTOM_TEXT':
+                               return (
+                                  <div key={sec.id} className="px-10">
+                                     <div className="bg-slate-50 p-4 rounded-xl border-l-4" style={{ borderColor: previewForm.themeColor }}>
+                                        <h4 className="text-sm font-bold text-slate-700">{sec.label}</h4>
+                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{sec.content}</p>
+                                     </div>
+                                  </div>
+                               );
+                             default: return null;
+                          }
+                       })}
+                       
+                       <div className="px-10 mt-6">
+                          <button 
+                             disabled 
+                             style={{ backgroundColor: previewForm.themeColor }}
+                             className="w-full text-white py-5 rounded-2xl font-black shadow-xl transition-all"
+                          >
+                             {previewForm.submitButtonText}
+                          </button>
+                          <p className="text-[9px] text-center text-slate-300 mt-6 uppercase font-bold tracking-widest">Powered by Magira Distribution CRM</p>
+                          
+                          {previewForm.thankYouUrl && (
+                            <div className="mt-8 p-3 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-bold text-center">
+                               🚀 REDIRECTS TO: {previewForm.thankYouUrl}
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FormBuilder;
