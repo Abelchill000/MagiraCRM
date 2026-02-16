@@ -1,4 +1,3 @@
-
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
   PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
@@ -187,7 +186,6 @@ class MockDb {
     return user;
   }
 
-  // Fix: Added missing switchUserRole method used in App.tsx
   switchUserRole(newRole: UserRole) {
     this.sync();
     if (this.data.currentUser) {
@@ -227,7 +225,7 @@ class MockDb {
     this.save();
   }
 
-  // --- DATA OPERATIONS (PASSTHROUGH) ---
+  // --- DATA OPERATIONS ---
   getProducts() { this.sync(); return this.data.products; }
   saveProduct(product: Product) {
     this.sync();
@@ -251,10 +249,8 @@ class MockDb {
     
     const oldStatus = order.deliveryStatus;
     order.deliveryStatus = status;
-    
     if (extra?.logisticsCost !== undefined) order.logisticsCost = extra.logisticsCost;
     
-    // Stock Logic
     if (status === DeliveryStatus.DELIVERED && oldStatus !== DeliveryStatus.DELIVERED) {
       order.items.forEach(item => {
         const product = this.data.products.find(p => p.id === item.productId);
@@ -322,7 +318,6 @@ class MockDb {
     return false;
   }
 
-  // Fix: Added missing restockStateHub method used in Products.tsx
   restockStateHub(productId: string, stateId: string, quantity: number) {
     this.sync();
     const product = this.data.products.find(p => p.id === productId);
