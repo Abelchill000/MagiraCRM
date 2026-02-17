@@ -28,7 +28,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onRoleSwitch, toggleSid
         {isAdmin && (
           <button
             onClick={() => onRoleSwitch(UserRole.SALES_AGENT)}
-            className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700"
+            className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700"
           >
             <span>🔄</span>
             <span>Switch to Agent View</span>
@@ -47,6 +47,20 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onRoleSwitch, toggleSid
           <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white font-bold border-2 ${isAgent ? 'bg-blue-600 border-blue-200' : 'bg-emerald-600 border-emerald-200'}`}>
             {user.name.charAt(0)}
           </div>
+
+          <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+
+          {/* Sign Out Button */}
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all group"
+            title="Sign Out"
+          >
+            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">Sign Out</span>
+            <svg className="w-5 h-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
 
           <button 
             onClick={toggleSidebar} 
