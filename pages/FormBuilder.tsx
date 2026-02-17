@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { db } from '../services/mockDb';
-import { OrderForm, Product, State, FormSection, SectionType } from '../types';
+import { OrderForm, Product, State, FormSection, SectionType, WebLead, LeadStatus } from '../types';
 
 const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
@@ -46,6 +46,19 @@ const FormBuilder: React.FC = () => {
   const [previewForm, setPreviewForm] = useState<OrderForm | null>(null);
   const [showCodeModal, setShowCodeModal] = useState<OrderForm | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
+
+  // Preview Submission State
+  const [previewData, setPreviewData] = useState<any>({
+    customerName: '',
+    phone: '',
+    whatsapp: '',
+    package: '',
+    state: '',
+    address: '',
+    deliveryInstructions: ''
+  });
+  const [previewSubmitted, setPreviewSubmitted] = useState(false);
+  const [isSubmittingPreview, setIsSubmittingPreview] = useState(false);
 
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -93,6 +106,44 @@ const FormBuilder: React.FC = () => {
     
     [sections[index], sections[targetIndex]] = [sections[targetIndex], sections[index]];
     setEditingForm({ ...editingForm, sections });
+  };
+
+  const handlePreviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!previewForm) return;
+
+    setIsSubmittingPreview(true);
+
+    let pkg = { qty: 1 };
+    try { pkg = JSON.parse(previewData.package); } catch(err) {}
+
+    const lead: WebLead = {
+      id: 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+      formId: previewForm.id,
+      customerName: previewData.customerName,
+      phone: previewData.phone,
+      whatsapp: previewData.whatsapp,
+      address: previewData.address,
+      deliveryInstructions: previewData.deliveryInstructions,
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }],
+      status: LeadStatus.NEW,
+      notes: `Captured from live preview: ${previewForm.title}`,
+      createdAt: new Date().toISOString()
+    };
+
+    // Save to DB
+    await db.createLead(lead);
+
+    // Simulate network delay
+    setTimeout(() => {
+      setIsSubmittingPreview(false);
+      if (previewForm.thankYouUrl) {
+        window.open(previewForm.thankYouUrl, '_blank');
+        setPreviewForm(null); // Close preview after redirect simulation
+      } else {
+        setPreviewSubmitted(true);
+      }
+    }, 1000);
   };
 
   const getEmbedCode = (form: OrderForm) => {
@@ -191,9 +242,23 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
 </script>`;
   };
 
+  const openPreview = (form: OrderForm) => {
+    setPreviewForm(form);
+    setPreviewSubmitted(false);
+    setPreviewData({
+      customerName: '',
+      phone: '',
+      whatsapp: '',
+      package: '',
+      state: '',
+      address: '',
+      deliveryInstructions: ''
+    });
+  };
+
   const handlePreviewUnsaved = () => {
     if (!editingForm) return;
-    setPreviewForm({ ...editingForm } as OrderForm);
+    openPreview({ ...editingForm } as OrderForm);
   };
 
   return (
@@ -246,7 +311,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
 
               <div className="grid grid-cols-1 gap-2">
                 <button 
-                  onClick={() => setPreviewForm(form)}
+                  onClick={() => openPreview(form)}
                   className="bg-slate-900 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition"
                 >
                   Live Preview
@@ -474,7 +539,20 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
            <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center">
               <div className={`relative transition-all duration-700 ease-in-out flex items-center justify-center ${previewDevice === 'mobile' ? 'w-[375px] h-[760px] rounded-[3.5rem] border-[14px] border-slate-800 scale-[0.85]' : 'w-full max-w-5xl h-full rounded-3xl'}`}>
                 <div className="flex-1 overflow-y-auto no-scrollbar rounded-[2.5rem] bg-white w-full h-full shadow-2xl">
-                   <div className="flex flex-col gap-8 pb-20">
+                   {previewSubmitted ? (
+                      <div className="flex flex-col items-center justify-center h-full p-12 text-center animate-in zoom-in duration-300">
+                        <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-xl shadow-emerald-100">✅</div>
+                        <h2 className="text-2xl font-black text-slate-800 mb-4 tracking-tight">Order Captured!</h2>
+                        <p className="text-slate-500 font-medium leading-relaxed">{previewForm.successMessage}</p>
+                        <button 
+                          onClick={() => setPreviewSubmitted(false)}
+                          className="mt-10 text-xs font-black text-emerald-600 uppercase tracking-widest hover:underline"
+                        >
+                          Submit another response
+                        </button>
+                      </div>
+                   ) : (
+                    <form onSubmit={handlePreviewSubmit} className="flex flex-col gap-8 pb-20">
                       {previewForm.sections.map(sec => {
                          switch(sec.type) {
                             case 'HEADER':
@@ -482,15 +560,90 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                             case 'IMAGE':
                               return <div key={sec.id} className="w-full"><img src={sec.content} className="w-full h-auto block" /></div>;
                             case 'CONTACT':
-                              return <div key={sec.id} className="px-10 space-y-4"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{sec.label}</label><input disabled placeholder="Full Name" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /><input disabled placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /><input disabled placeholder="WhatsApp Number" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /></div>;
+                              return (
+                                <div key={sec.id} className="px-10 space-y-4">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{sec.label}</label>
+                                  <input 
+                                    required
+                                    placeholder="Full Name" 
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
+                                    value={previewData.customerName}
+                                    onChange={e => setPreviewData({...previewData, customerName: e.target.value})}
+                                  />
+                                  <input 
+                                    required
+                                    placeholder="Phone Number (Call)" 
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
+                                    value={previewData.phone}
+                                    onChange={e => setPreviewData({...previewData, phone: e.target.value})}
+                                  />
+                                  <input 
+                                    placeholder="WhatsApp Number" 
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
+                                    value={previewData.whatsapp}
+                                    onChange={e => setPreviewData({...previewData, whatsapp: e.target.value})}
+                                  />
+                                </div>
+                              );
                             case 'PRODUCTS':
-                              return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-800 appearance-none"><option>Select Ginger Shot Package...</option></select></div>;
+                              return (
+                                <div key={sec.id} className="px-10">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                  <select 
+                                    required
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-800 appearance-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                                    value={previewData.package}
+                                    onChange={e => setPreviewData({...previewData, package: e.target.value})}
+                                  >
+                                    <option value="">Select Ginger Shot Package...</option>
+                                    {PACKAGES.map((pkg, i) => (
+                                      <option key={i} value={JSON.stringify({ qty: pkg.qty, price: pkg.price })}>{pkg.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              );
                             case 'LOCATION':
-                              return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none"><option>Select State Hub...</option></select></div>;
+                              return (
+                                <div key={sec.id} className="px-10">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                  <select 
+                                    required
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                                    value={previewData.state}
+                                    onChange={e => setPreviewData({...previewData, state: e.target.value})}
+                                  >
+                                    <option value="">Select State Hub...</option>
+                                    {NIGERIA_STATES.map((s, i) => <option key={i} value={s}>{s}</option>)}
+                                  </select>
+                                </div>
+                              );
                             case 'ADDRESS':
-                              return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><textarea disabled placeholder="Street, City, Area" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none" rows={2} /></div>;
+                              return (
+                                <div key={sec.id} className="px-10">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                  <textarea 
+                                    required
+                                    placeholder="Street, City, Area" 
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all" 
+                                    rows={2} 
+                                    value={previewData.address}
+                                    onChange={e => setPreviewData({...previewData, address: e.target.value})}
+                                  />
+                                </div>
+                              );
                             case 'DELIVERY_INSTRUCTIONS':
-                              return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><textarea disabled placeholder={sec.content || "e.g. Call before arrival"} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none" rows={2} /></div>;
+                              return (
+                                <div key={sec.id} className="px-10">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
+                                  <textarea 
+                                    placeholder={sec.content || "e.g. Call before arrival"} 
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all" 
+                                    rows={2} 
+                                    value={previewData.deliveryInstructions}
+                                    onChange={e => setPreviewData({...previewData, deliveryInstructions: e.target.value})}
+                                  />
+                                </div>
+                              );
                             case 'BENEFITS':
                               return <div key={sec.id} className="px-10"><div className="bg-slate-50 p-8 rounded-3xl"><h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">{sec.label}</h4><ul className="space-y-3">{sec.content?.split('\n').map((b, i) => <li key={i} className="flex items-center gap-3 text-sm text-slate-600 font-medium"><span style={{ color: previewForm.themeColor }}>✓</span> {b}</li>)}</ul></div></div>;
                             case 'TESTIMONIALS':
@@ -504,10 +657,19 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                       })}
                       
                       <div className="px-10">
-                         <button disabled style={{ backgroundColor: previewForm.themeColor }} className="w-full text-white py-5 rounded-[1.5rem] font-black shadow-2xl opacity-90 uppercase tracking-[0.2em] text-sm">{previewForm.submitButtonText}</button>
+                         <button 
+                          type="submit"
+                          disabled={isSubmittingPreview}
+                          style={{ backgroundColor: previewForm.themeColor }} 
+                          className={`w-full text-white py-5 rounded-[1.5rem] font-black shadow-2xl uppercase tracking-[0.2em] text-sm transition-all active:scale-95 flex items-center justify-center gap-3 ${isSubmittingPreview ? 'opacity-70 cursor-wait' : 'hover:scale-[1.02]'}`}
+                         >
+                           {isSubmittingPreview && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>}
+                           {isSubmittingPreview ? 'Processing...' : previewForm.submitButtonText}
+                         </button>
                          <p className="text-[10px] text-center text-slate-300 mt-10 uppercase font-black tracking-widest">Magira CRM Production</p>
                       </div>
-                   </div>
+                    </form>
+                   )}
                 </div>
               </div>
            </div>
