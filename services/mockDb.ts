@@ -62,7 +62,6 @@ class FirebaseDb {
       this.authInitialized = true;
       if (fbUser) {
         try {
-          // Attempt to get user profile - this is the first gated check
           const userRef = doc(firestore, 'users', fbUser.uid);
           const userDoc = await getDoc(userRef);
           
@@ -70,12 +69,10 @@ class FirebaseDb {
             this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
             this.initRealtimeSync();
           } else {
-            // Document might not exist yet if they just signed up
             this.currentUser = null;
             this.stopRealtimeSync();
           }
         } catch (err) {
-          // If permission denied here, user has no profile doc yet
           this.currentUser = null;
           this.stopRealtimeSync();
         }
@@ -110,17 +107,13 @@ class FirebaseDb {
             this.notify();
           },
           (error) => {
-            // SILENT FAIL for permission errors to prevent console spam
-            // This happens if a user is logged in but their 'status' is not yet 'approved'
             if (!error.message.includes('permission-denied')) {
               console.error(`Firestore Sync Error [${colName}]:`, error.message);
             }
           }
         );
         this.unsubscribers.push(unsub);
-      } catch (e) {
-        // Catch immediate synchronous failures
-      }
+      } catch (e) {}
     });
   }
 
@@ -141,10 +134,7 @@ class FirebaseDb {
   getCurrentUser() { return this.currentUser; }
   getUsers() { return [...this.data.users]; }
 
-  async register(name: string, email: string, password: string, requestedRole: UserRole) {
-    // BOOTSTRAP LOGIC: 
-    // If user uses the reserved email, they are ALWAYS Admin and Approved.
-    // This avoids needing to read the users collection before registration.
+  async register(name: string, email: string, phone: string, password: string, requestedRole: UserRole) {
     const isBootstrapAdmin = email.toLowerCase() === 'admin@magiracrm.store';
     
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -156,13 +146,13 @@ class FirebaseDb {
     const userData: Partial<User> = {
       name,
       email,
+      phone,
       role: finalRole,
       status: finalStatus as any,
       isApproved: finalStatus === 'approved',
       registeredAt: new Date().toISOString()
     };
 
-    // Set the doc - this will work because rules allow users to write their own UID doc
     await setDoc(doc(firestore, 'users', uid), userData);
     
     const newUser = { id: uid, ...userData } as User;
@@ -179,7 +169,7 @@ class FirebaseDb {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const userDoc = await getDoc(doc(firestore, 'users', userCredential.user.uid));
     
-    if (!userDoc.exists()) throw new Error("Profile document not found. Please re-register.");
+    if (!userDoc.exists()) throw new Error("Profile document not found.");
     const profile = userDoc.data() as User;
     
     if (profile.status === 'pending') throw new Error("Account pending approval");
@@ -198,7 +188,6 @@ class FirebaseDb {
     this.notify();
   }
 
-  // Admin Actions
   async approveUser(userId: string) {
     await updateDoc(doc(firestore, 'users', userId), { status: 'approved', isApproved: true });
   }
@@ -217,7 +206,6 @@ class FirebaseDb {
     return null;
   }
 
-  // Data Getters
   getProducts() { return [...this.data.products]; }
   getOrders() { return [...this.data.orders]; }
   getStates() { return [...this.data.states]; }
@@ -225,7 +213,6 @@ class FirebaseDb {
   getForms() { return [...this.data.forms]; }
   getLeads() { return [...this.data.leads]; }
 
-  // Data Savers
   async saveProduct(product: Product) {
     const { id, ...rest } = product;
     await setDoc(doc(firestore, 'products', id), rest);
@@ -285,9 +272,7 @@ class FirebaseDb {
       });
     }
   }
-  async clearAllData() {
-    console.warn("Manual data purge requested. Not implemented for production safety.");
-  }
+  async clearAllData() {}
 }
 
 export const db = new FirebaseDb();

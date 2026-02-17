@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [signUpData, setSignUpData] = useState({ name: '', email: '', password: '' });
+  const [signUpData, setSignUpData] = useState({ name: '', email: '', phone: '', password: '' });
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
@@ -63,7 +63,13 @@ const App: React.FC = () => {
     setIsRegistering(true);
     
     try {
-      await db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
+      await db.register(
+        signUpData.name, 
+        signUpData.email, 
+        signUpData.phone,
+        signUpData.password, 
+        UserRole.SALES_AGENT
+      );
       setAuthView('pending');
     } catch (err: any) {
       setAuthError(err.message || 'Firebase Registration Failure');
@@ -157,6 +163,15 @@ const App: React.FC = () => {
                     placeholder="agent@email.com"
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, email: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Phone Number</label>
+                  <input 
+                    type="tel" required
+                    placeholder="e.g. 08012345678"
+                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
+                    onChange={e => setSignUpData({...signUpData, phone: e.target.value})}
                   />
                 </div>
                 <div>
