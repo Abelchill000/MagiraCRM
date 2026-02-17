@@ -29,10 +29,18 @@ const App: React.FC = () => {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [signUpData, setSignUpData] = useState({ name: '', email: '', phone: '', password: '' });
+  const [isReady, setIsReady] = useState(db.isAuthReady());
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
-      setUser(db.getCurrentUser());
+      const currentUser = db.getCurrentUser();
+      setUser(currentUser);
+      setIsReady(db.isAuthReady());
+      
+      // If user is logged in but not approved, force pending view
+      if (currentUser && !currentUser.isApproved) {
+        setAuthView('pending');
+      }
     });
     return unsub;
   }, []);
@@ -70,9 +78,9 @@ const App: React.FC = () => {
         signUpData.password, 
         UserRole.SALES_AGENT
       );
-      setAuthView('pending');
+      // View switches automatically via subscriber
     } catch (err: any) {
-      setAuthError(err.message || 'Firebase Registration Failure');
+      setAuthError(err.message || 'Registration Failure');
     } finally {
       setIsRegistering(false);
     }
@@ -83,6 +91,7 @@ const App: React.FC = () => {
     setUser(null);
     setAuthView('login');
     setPasswordInput('');
+    setEmailInput('');
   };
 
   const handleRoleSwitch = async (newRole: UserRole) => {
@@ -95,14 +104,25 @@ const App: React.FC = () => {
     }
   };
 
-  if (!user) {
+  // Auth Loading State
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-emerald-50">
+        <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-emerald-900 font-black uppercase tracking-widest text-[10px]">Encrypting Cloud Session...</p>
+      </div>
+    );
+  }
+
+  // Auth Guard
+  if (!user || !user.isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-emerald-50 p-4">
         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-300">
           <div className="text-center mb-10">
             <div className="w-16 h-16 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-emerald-200 mb-4">M</div>
             <h1 className="text-3xl font-black text-slate-800">Magira CRM</h1>
-            <p className="text-slate-500 mt-2 text-sm font-medium">Cloud Integrated Distribution Management</p>
+            <p className="text-slate-500 mt-2 text-sm font-medium">Distribution Network Management</p>
           </div>
 
           {authView === 'login' && (
@@ -142,7 +162,7 @@ const App: React.FC = () => {
           {authView === 'signup' && (
             <form onSubmit={handleSignUp} className="space-y-4">
               {authError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl animate-in shake duration-500">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
                   <p className="text-[11px] text-red-600 leading-relaxed font-medium">{authError}</p>
                 </div>
               )}
@@ -151,7 +171,7 @@ const App: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
                   <input 
                     type="text" required
-                    placeholder="Enter your real name"
+                    placeholder="John Doe"
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, name: e.target.value})}
                   />
@@ -166,16 +186,16 @@ const App: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Phone Number</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp / Phone</label>
                   <input 
                     type="tel" required
-                    placeholder="e.g. 08012345678"
+                    placeholder="08012345678"
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, phone: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Create Password</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password</label>
                   <input 
                     type="password" required
                     placeholder="••••••••"
@@ -189,14 +209,7 @@ const App: React.FC = () => {
                 disabled={isRegistering}
                 className={`w-full text-white font-black py-4 rounded-xl shadow-lg transition mt-4 flex items-center justify-center gap-2 ${isRegistering ? 'bg-slate-400' : 'bg-slate-900 hover:bg-black'}`}
               >
-                {isRegistering ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Creating Account...
-                  </>
-                ) : (
-                  'Create Secure Profile'
-                )}
+                {isRegistering ? 'Syncing...' : 'Request Access'}
               </button>
               <div className="text-center pt-4">
                 <button type="button" onClick={() => { setAuthError(''); setAuthView('login'); }} className="text-xs font-bold text-slate-400 hover:text-slate-600">
@@ -209,14 +222,17 @@ const App: React.FC = () => {
           {authView === 'pending' && (
             <div className="text-center py-6 animate-in slide-in-from-bottom-4">
               <div className="text-6xl mb-6">🌩️</div>
-              <h2 className="text-2xl font-black text-slate-800">Cloud Sync Successful</h2>
+              <h2 className="text-2xl font-black text-slate-800">Account Pending</h2>
               <p className="text-slate-500 text-sm mt-4 px-4 leading-relaxed">
-                Your profile is now in our cloud database.
+                Your profile is registered in our cloud database.
                 <br /><br />
-                <strong className="text-emerald-600">Security Gate:</strong> An administrator must review and approve your account before you can access the dashboard.
+                <strong className="text-emerald-600">Security Requirement:</strong> An administrator must review your credentials and approve your access manually.
               </p>
-              <button onClick={() => setAuthView('login')} className="mt-8 text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-6 py-3 rounded-full hover:bg-emerald-100 transition">
-                Return to Login
+              <button 
+                onClick={handleLogout} 
+                className="mt-8 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-red-500 transition"
+              >
+                Sign Out & Return
               </button>
             </div>
           )}

@@ -59,7 +59,6 @@ class FirebaseDb {
 
   private initAuth() {
     onAuthStateChanged(auth, async (fbUser) => {
-      this.authInitialized = true;
       if (fbUser) {
         try {
           const userRef = doc(firestore, 'users', fbUser.uid);
@@ -67,19 +66,22 @@ class FirebaseDb {
           
           if (userDoc.exists()) {
             this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
-            this.initRealtimeSync();
+            if (this.currentUser.isApproved) {
+              this.initRealtimeSync();
+            }
           } else {
+            // Document might be missing if registration was interrupted
             this.currentUser = null;
-            this.stopRealtimeSync();
           }
         } catch (err) {
+          console.error("Profile Fetch Error:", err);
           this.currentUser = null;
-          this.stopRealtimeSync();
         }
       } else {
         this.currentUser = null;
         this.stopRealtimeSync();
       }
+      this.authInitialized = true;
       this.notify();
     });
   }
@@ -107,8 +109,9 @@ class FirebaseDb {
             this.notify();
           },
           (error) => {
+            // Quietly ignore permission errors as they are expected during role transitions
             if (!error.message.includes('permission-denied')) {
-              console.error(`Firestore Sync Error [${colName}]:`, error.message);
+              console.warn(`Firestore Sync Error [${colName}]:`, error.message);
             }
           }
         );
@@ -131,6 +134,7 @@ class FirebaseDb {
     this.listeners.forEach(l => l());
   }
 
+  isAuthReady() { return this.authInitialized; }
   getCurrentUser() { return this.currentUser; }
   getUsers() { return [...this.data.users]; }
 
@@ -155,13 +159,13 @@ class FirebaseDb {
 
     await setDoc(doc(firestore, 'users', uid), userData);
     
-    const newUser = { id: uid, ...userData } as User;
-    if (isBootstrapAdmin) {
-      this.currentUser = newUser;
+    // Update local state immediately
+    this.currentUser = { id: uid, ...userData } as User;
+    if (this.currentUser.isApproved) {
       this.initRealtimeSync();
-      this.notify();
     }
-    return newUser;
+    this.notify();
+    return this.currentUser;
   }
 
   async login(email: string, password?: string) {
