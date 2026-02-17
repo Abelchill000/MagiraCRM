@@ -83,7 +83,7 @@ export interface Order {
   reminderEnabled?: boolean;
 }
 
-export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'LOCATION' | 'ADDRESS' | 'CUSTOM_TEXT';
+export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'LOCATION' | 'ADDRESS' | 'CUSTOM_TEXT' | 'BENEFITS' | 'TESTIMONIALS' | 'FAQ' | 'IMAGE';
 
 export interface FormSection {
   id: string;
