@@ -23,19 +23,43 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     e.preventDefault();
     if (!selectedLead || !convDetails.stateId) return;
 
+    // Detect if this is a specialized Ginger Shot package lead
+    // If it is, the lead should ideally contain a totalPrice in its metadata (simulated here)
+    const isSpecialPackage = selectedLead.productId === 'GINGER-SHOT-500ML' || selectedLead.items.some(i => i.productId === 'GINGER-SHOT-500ML');
+    
     // Calculate totals
     const orderItems: OrderItem[] = selectedLead.items.map(item => {
-      const p = products.find(prod => prod.id === item.productId);
+      // Find actual product in inventory or use placeholder
+      const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
       return {
-        productId: item.productId,
-        productName: p?.name || 'Unknown Item',
+        productId: p?.id || item.productId,
+        productName: p?.name || 'Ginger Shot (500ml)',
         quantity: item.quantity,
-        priceAtOrder: p?.sellingPrice || 0,
-        costAtOrder: p?.costPrice || 0
+        priceAtOrder: p?.sellingPrice || 20000, // Default to single unit price
+        costAtOrder: p?.costPrice || 5000
       };
     });
 
-    const total = orderItems.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0);
+    // Special Price Tiers for Ginger Shot 500ml
+    const packagePrices: Record<number, number> = {
+      1: 20000,
+      2: 38000,
+      3: 55000,
+      6: 90000,
+      8: 126000,
+      10: 165000,
+      15: 249500,
+      18: 300000,
+      30: 500000
+    };
+
+    let total = 0;
+    if (isSpecialPackage && selectedLead.items.length === 1) {
+      const qty = selectedLead.items[0].quantity;
+      total = packagePrices[qty] || (orderItems[0].priceAtOrder * qty);
+    } else {
+      total = orderItems.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0);
+    }
 
     const order: Order = {
       id: 'ORD-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
@@ -59,27 +83,28 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     setLeads([...db.getLeads()]);
     setShowConvertModal(false);
     setSelectedLead(null);
-    alert('Lead successfully converted to Order!');
+    alert(`Lead converted! Total Amount applied: ₦${total.toLocaleString()}`);
   };
 
-  // Simulation: Generate a mock lead with manual quantity selection simulation
   const generateMockLead = () => {
     const forms = db.getForms();
     if (forms.length === 0) {
-      alert('Create a form first!');
+      alert('Create a form in Form Builder first!');
       return;
     }
     const form = forms[0];
-    const randomQty = Math.floor(Math.random() * 5) + 1;
+    const tiers = [1, 2, 3, 6, 8, 10, 15, 18, 30];
+    const randomQty = tiers[Math.floor(Math.random() * tiers.length)];
+    
     const newLead: WebLead = {
       id: 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
       formId: form.id,
-      customerName: ['Chinedu Obi', 'Fatima Musa', 'Segun Arinze', 'Bolu Ade', 'Kelechi Iheanacho'][Math.floor(Math.random() * 5)],
+      customerName: ['Musa Okoro', 'Adebayo Balogun', 'Blessing Uche', 'Chioma Ndu', 'John Ibrahim'][Math.floor(Math.random() * 5)],
       phone: '080' + Math.floor(10000000 + Math.random() * 90000000),
-      address: '123 Fake Street, Distribution District',
-      items: [{ productId: form.productIds[0] || 'p1', quantity: randomQty }],
+      address: 'Lagos Island, Street Address Section',
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: randomQty }],
       status: LeadStatus.NEW,
-      notes: `Customer requested ${randomQty} units manually via form.`,
+      notes: `Simulated package lead for ${randomQty} bottles.`,
       createdAt: new Date().toISOString()
     };
     db.createLead(newLead);
@@ -91,13 +116,13 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Web Leads</h1>
-          <p className="text-slate-500">Review and process orders captured from embedded forms.</p>
+          <p className="text-slate-500">Capture and convert orders from your landing pages.</p>
         </div>
         <button 
           onClick={generateMockLead}
           className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
         >
-          <span>🤖</span> Simulate New Lead
+          <span>🤖</span> Simulate Package Lead
         </button>
       </div>
 
@@ -106,16 +131,16 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Lead Info</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Lead Details</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Items</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Selection</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">No web leads captured yet.</td>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">No leads captured yet. Use Form Builder to get started.</td>
                 </tr>
               ) : (
                 leads.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(lead => (
@@ -123,7 +148,9 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">{lead.customerName}</p>
                       <p className="text-xs text-slate-500">{lead.phone}</p>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">Source: {lead.formId} • {new Date(lead.createdAt).toLocaleTimeString()}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
+                        {new Date(lead.createdAt).toLocaleDateString()} at {new Date(lead.createdAt).toLocaleTimeString()}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
                       <select 
@@ -142,8 +169,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {lead.items.map((item, idx) => (
-                          <span key={idx} className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded">
-                            {products.find(p => p.id === item.productId)?.name} x{item.quantity}
+                          <span key={idx} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-lg">
+                            Ginger Shot x{item.quantity}
                           </span>
                         ))}
                       </div>
@@ -152,8 +179,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       <div className="flex justify-end space-x-2">
                         <button 
                           onClick={() => window.open(`tel:${lead.phone}`)}
-                          className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition"
-                          title="Call Customer"
+                          className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition"
+                          title="Call Lead"
                         >
                           📞
                         </button>
@@ -179,24 +206,24 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       {showConvertModal && selectedLead && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 animate-in fade-in zoom-in duration-200">
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Lead Conversion</h2>
-            <p className="text-slate-500 text-sm mb-6">Assign a destination state and payment method to generate an official order.</p>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Finalize Conversion</h2>
+            <p className="text-slate-500 text-sm mb-6">Confirm destination hub and payment status to move this lead into the active order flow.</p>
             
             <form onSubmit={handleConvert} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Destination Hub</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Destination State Hub</label>
                 <select 
                   required 
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 transition-all"
                   value={convDetails.stateId}
                   onChange={e => setConvDetails({...convDetails, stateId: e.target.value})}
                 >
-                  <option value="">Select State</option>
+                  <option value="">-- Choose Hub --</option>
                   {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payment Terms</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payment Method</label>
                 <select 
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 transition-all"
                   value={convDetails.paymentStatus}
@@ -207,7 +234,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               </div>
               <div className="flex flex-col gap-3 pt-4">
                 <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100 transition-all">
-                  Generate Order & Deduct Stock
+                  Create Order & Confirm Price
                 </button>
                 <button type="button" onClick={() => { setShowConvertModal(false); setSelectedLead(null); }} className="w-full py-3 text-slate-400 font-bold hover:text-slate-600 transition">
                   Go Back

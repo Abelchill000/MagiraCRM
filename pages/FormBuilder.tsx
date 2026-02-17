@@ -6,11 +6,23 @@ import { OrderForm, Product, State, FormSection, SectionType } from '../types';
 const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
   CONTACT: { label: 'Customer Information' },
-  PRODUCTS: { label: 'Select Your Products' },
+  PRODUCTS: { label: 'Select Your Package' },
   LOCATION: { label: 'Delivery State' },
   ADDRESS: { label: 'Street Address' },
   CUSTOM_TEXT: { label: 'Special Instructions', content: 'Please note that delivery takes 24-48 hours.' },
 };
+
+const PACKAGES = [
+  { label: '1 BOTTLE of 500ml @ ₦20,000', qty: 1, price: 20000 },
+  { label: '2 BOTTLES of 500ml @ ₦38,000', qty: 2, price: 38000 },
+  { label: '3 BOTTLES of 500ml @ ₦55,000', qty: 3, price: 55000 },
+  { label: '6 BOTTLES of 500ml @ ₦90,000', qty: 6, price: 90000 },
+  { label: '8 BOTTLES of 500ml @ ₦126,000', qty: 8, price: 126000 },
+  { label: '10 BOTTLES of 500ml @ ₦165,000 (Get 1 Free)', qty: 10, price: 165000 },
+  { label: '15 BOTTLES of 500ml @ ₦249,500 (Get 2 Free)', qty: 15, price: 249500 },
+  { label: '18 BOTTLES of 500ml @ ₦300,000 (Get 3 Free)', qty: 18, price: 300000 },
+  { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Free)', qty: 30, price: 500000 },
+];
 
 const FormBuilder: React.FC = () => {
   const [forms, setForms] = useState<OrderForm[]>(db.getForms());
@@ -75,19 +87,10 @@ const FormBuilder: React.FC = () => {
     setEditingForm({ ...editingForm, sections });
   };
 
-  const toggleProduct = (pid: string) => {
-    const current = editingForm?.productIds || [];
-    const updated = current.includes(pid) 
-      ? current.filter(id => id !== pid) 
-      : [...current, pid];
-    setEditingForm({ ...editingForm, productIds: updated });
-  };
-
   const getEmbedCode = (form: OrderForm) => {
-    const productOptions = form.productIds.map(id => {
-      const p = products.find(prod => prod.id === id);
-      return `<option value="${id}">${p?.name} - ₦${p?.sellingPrice.toLocaleString()}</option>`;
-    }).join('\n            ');
+    const packageOptions = PACKAGES.map(pkg => 
+      `<option value='{"qty":${pkg.qty}, "price":${pkg.price}}'>${pkg.label}</option>`
+    ).join('\n            ');
 
     const stateOptions = states.map(s => `<option value="${s.id}">${s.name}</option>`).join('\n            ');
 
@@ -108,19 +111,12 @@ const FormBuilder: React.FC = () => {
     </div>`;
         case 'PRODUCTS':
           return `
-    <div style="padding: 0 24px; display: flex; flex-direction: column; gap: 8px;">
-      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${sec.label || 'Products'}</label>
-      <div style="display: flex; gap: 10px;">
-        <div style="flex: 2;">
-          <select name="productId" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
-            <option value="">-- Select Product --</option>
-            ${productOptions}
-          </select>
-        </div>
-        <div style="flex: 1;">
-          <input type="number" name="quantity" value="1" min="1" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box;" placeholder="Qty">
-        </div>
-      </div>
+    <div style="padding: 0 24px;">
+      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'Select Package'}</label>
+      <select name="packageData" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
+        <option value="">-- Choose Ginger Shot Offer --</option>
+        ${packageOptions}
+      </select>
     </div>`;
         case 'LOCATION':
           return `
@@ -165,15 +161,29 @@ const FormBuilder: React.FC = () => {
 document.getElementById('magira-form-${form.id}').addEventListener('submit', function(e) {
   e.preventDefault();
   const formData = new FormData(this);
-  const data = Object.fromEntries(formData.entries());
+  const rawData = Object.fromEntries(formData.entries());
+  
+  // Parse package data
+  let pkg = { qty: 1, price: 0 };
+  try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
+
+  const payload = {
+    customerName: rawData.customerName,
+    phone: rawData.phone,
+    address: rawData.address,
+    stateId: rawData.stateId,
+    // Ginger Shot (assuming a default ID if none exists, or identify by name)
+    productId: 'GINGER-SHOT-500ML', 
+    quantity: pkg.qty,
+    totalPrice: pkg.price,
+    formId: '${form.id}'
+  };
+
   const btn = this.querySelector('button');
-  
   btn.disabled = true;
-  btn.innerText = 'Processing Order...';
+  btn.innerText = 'Processing...';
   
-  // Note: For multi-product support, you might want to structure items as an array.
-  // In this simple version, we capture productId and quantity directly.
-  console.log('Lead Captured:', data);
+  console.log('Magira Lead Data:', payload);
   
   setTimeout(() => {
     const thankYouUrl = "${form.thankYouUrl || ''}";
@@ -183,12 +193,12 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
       document.getElementById('magira-container-${form.id}').innerHTML = \`
         <div style="padding: 60px 40px; text-align: center; color: #1e293b;">
           <div style="font-size: 60px; margin-bottom: 24px;">🎉</div>
-          <h3 style="margin: 0 0 12px 0; font-size: 22px; font-weight: 800;">Submission Sent!</h3>
+          <h3 style="margin: 0 0 12px 0; font-size: 22px; font-weight: 800;">Order Received!</h3>
           <p style="color: #64748b; font-size: 14px; line-height: 1.6;">${form.successMessage}</p>
         </div>
       \`;
     }
-  }, 1200);
+  }, 1000);
 });
 </script>`;
   };
@@ -216,25 +226,26 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Form Builder</h1>
-          <p className="text-slate-500">Manually construct forms with draggable sections and custom fields.</p>
+          <p className="text-slate-500">Configure your "Ginger Shot" landing page forms.</p>
         </div>
         <button 
           onClick={() => { setEditingForm({ 
             productIds: [], 
             themeColor: '#10b981', 
             sections: [
-               { id: 'sec-1', type: 'HEADER', label: 'Order Form', content: 'Fresh shots available now.' },
+               { id: 'sec-1', type: 'HEADER', label: 'Order Form', content: 'Magira Health Shots: 100% Organic.' },
                { id: 'sec-2', type: 'CONTACT' },
                { id: 'sec-3', type: 'PRODUCTS' },
-               { id: 'sec-4', type: 'ADDRESS' }
+               { id: 'sec-4', type: 'LOCATION' },
+               { id: 'sec-5', type: 'ADDRESS' }
             ],
-            submitButtonText: 'Place Order Now',
-            successMessage: 'Thank you! Your order request has been received.',
+            submitButtonText: 'Order Now',
+            successMessage: 'We will contact you via WhatsApp to confirm your delivery.',
             thankYouUrl: '',
           }); setShowModal(true); }}
           className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition"
         >
-          + Create Custom Form
+          + Create New Form
         </button>
       </div>
 
@@ -249,7 +260,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                   {form.isActive ? 'Active' : 'Draft'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-4">Form Structure</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-4">Form Layout</p>
               <div className="flex flex-wrap gap-1 mt-2 mb-6">
                 {(form.sections || []).map(s => (
                    <span key={s.id} className="text-[9px] font-black bg-slate-50 text-slate-500 border border-slate-100 px-2 py-1 rounded-full">{s.type}</span>
@@ -261,7 +272,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                   onClick={() => setPreviewForm(form)}
                   className="bg-slate-50 hover:bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold transition"
                 >
-                  Preview Mode
+                  Preview
                 </button>
                 <button 
                   onClick={() => { setEditingForm(form); setShowModal(true); }}
@@ -273,7 +284,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                   onClick={() => setShowCodeModal(form)}
                   className="col-span-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2"
                 >
-                  <span>📋</span> Get Embed Code
+                  <span>📋</span> Copy Embed Code
                 </button>
               </div>
             </div>
@@ -287,12 +298,16 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div>
-                <h2 className="text-xl font-bold text-slate-800">Embed Lead Form</h2>
-                <p className="text-xs text-slate-500">Copy the code below to start capturing orders.</p>
+                <h2 className="text-xl font-bold text-slate-800">Form Embed Code</h2>
+                <p className="text-xs text-slate-500">Paste this HTML into your landing page builder.</p>
               </div>
               <button onClick={() => setShowCodeModal(null)} className="text-slate-400 hover:text-slate-600 bg-white w-8 h-8 rounded-full flex items-center justify-center shadow-sm">✕</button>
             </div>
             <div className="p-8 space-y-4">
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 mb-2">
+                 <p className="text-[10px] text-amber-800 font-bold uppercase tracking-widest">Note</p>
+                 <p className="text-xs text-amber-900 mt-1">This form is optimized for the <strong>Ginger Shot</strong> package offers you requested.</p>
+              </div>
               <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-x-auto max-h-[400px] leading-relaxed font-mono relative group">
                 {getEmbedCode(showCodeModal)}
                 <button 
@@ -322,7 +337,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
           <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col md:flex-row h-[85vh]">
             {/* Sidebar Controls */}
             <div className="w-full md:w-80 bg-slate-50 border-r border-slate-100 p-6 overflow-y-auto">
-              <h2 className="text-lg font-black text-slate-800 mb-6">Form Components</h2>
+              <h2 className="text-lg font-black text-slate-800 mb-6">Components</h2>
               <div className="space-y-2">
                 {(['HEADER', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS', 'CUSTOM_TEXT'] as SectionType[]).map(type => (
                   <button 
@@ -333,14 +348,14 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                     <span className="bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
                     <div>
                        <p className="text-xs font-bold text-slate-700">{type.replace('_', ' ')}</p>
-                       <p className="text-[10px] text-slate-400">Add to layout</p>
+                       <p className="text-[10px] text-slate-400">Add to form</p>
                     </div>
                   </button>
                 ))}
               </div>
               
               <div className="mt-10 pt-6 border-t border-slate-200">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Form Theme</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Brand Color</label>
                 <div className="flex items-center gap-3 bg-white border border-slate-200 p-2 rounded-xl">
                   <input 
                     type="color"
@@ -351,36 +366,16 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                   <span className="text-[10px] font-mono font-bold text-slate-500">{editingForm?.themeColor}</span>
                 </div>
               </div>
-
-              <div className="mt-6">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Product Catalog</label>
-                <div className="grid grid-cols-1 gap-2">
-                  {products.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => toggleProduct(p.id)}
-                      className={`text-[10px] font-bold p-2 rounded-lg border text-left truncate ${
-                        editingForm?.productIds?.includes(p.id) 
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700' 
-                          : 'bg-white border-slate-200 text-slate-500'
-                      }`}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Main Canvas */}
             <div className="flex-1 flex flex-col bg-slate-100/50 p-6 overflow-y-auto">
                <div className="max-w-xl mx-auto w-full space-y-4">
                   <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Form Internal Name</label>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Campaign Name</label>
                      <input 
                         className="w-full text-xl font-bold border-none p-0 focus:ring-0 placeholder-slate-300"
-                        placeholder="Lead Capture Name..."
+                        placeholder="e.g. Ginger Shot Promo Page"
                         value={editingForm?.title || ''}
                         onChange={e => setEditingForm({...editingForm, title: e.target.value})}
                      />
@@ -420,28 +415,29 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                               updated[idx].content = e.target.value;
                               setEditingForm({...editingForm, sections: updated});
                             }}
-                            placeholder="Add descriptive content here..."
+                            placeholder="Add descriptive text..."
                           />
                         )}
 
-                        {(section.type === 'CONTACT' || section.type === 'PRODUCTS' || section.type === 'ADDRESS' || section.type === 'LOCATION') && (
+                        {(section.type === 'PRODUCTS') && (
+                           <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col gap-2">
+                              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Static Package List</span>
+                              <p className="text-[11px] text-emerald-800 leading-relaxed italic">The form will show your fixed price tiers (1-30 bottles) as a dropdown.</p>
+                           </div>
+                        )}
+
+                        {(section.type === 'CONTACT' || section.type === 'ADDRESS' || section.type === 'LOCATION') && (
                            <div className="bg-slate-50 h-10 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic {section.type} Field Block</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic {section.type} Block</span>
                            </div>
                         )}
                       </div>
                     ))}
-
-                    {(editingForm?.sections || []).length === 0 && (
-                      <div className="text-center py-10 text-slate-400 text-xs font-bold border-2 border-dashed rounded-3xl bg-white border-slate-200">
-                         DRAG COMPONENTS HERE OR CLICK BUTTONS ON SIDEBAR
-                      </div>
-                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mt-8">
                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Button Label</label>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Submit Button Text</label>
                         <input 
                            className="w-full text-xs font-bold bg-slate-50 border-none rounded-lg p-2"
                            value={editingForm?.submitButtonText || ''}
@@ -449,41 +445,30 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                         />
                      </div>
                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Success Msg</label>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Success Message</label>
                         <input 
                            className="w-full text-xs font-bold bg-slate-50 border-none rounded-lg p-2"
                            value={editingForm?.successMessage || ''}
                            onChange={e => setEditingForm({...editingForm, successMessage: e.target.value})}
                         />
                      </div>
-                     <div className="col-span-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Custom Thank You Page URL (Optional)</label>
-                        <input 
-                           className="w-full text-xs font-bold bg-slate-50 border-none rounded-lg p-2 placeholder:font-normal"
-                           value={editingForm?.thankYouUrl || ''}
-                           onChange={e => setEditingForm({...editingForm, thankYouUrl: e.target.value})}
-                           placeholder="https://yourwebsite.com/thank-you"
-                        />
-                        <p className="text-[9px] text-slate-400 mt-2">If provided, users will be redirected here after submission instead of seeing the success message.</p>
-                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-8">
-                    <button onClick={() => setShowModal(false)} className="text-slate-400 font-bold text-xs uppercase hover:text-slate-600 transition">Discard Changes</button>
-                    
+                    <button onClick={() => setShowModal(false)} className="text-slate-400 font-bold text-xs uppercase hover:text-slate-600 transition">Cancel</button>
                     <div className="flex items-center gap-3">
                       <button 
                         type="button"
                         onClick={handlePreviewUnsaved}
                         className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition"
                       >
-                        👁️ Preview Layout
+                        Preview Form
                       </button>
                       <button 
                         onClick={() => handleSave()} 
                         className="bg-emerald-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition"
                       >
-                        Save Form Structure
+                        Finalize Form
                       </button>
                     </div>
                   </div>
@@ -502,8 +487,6 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                  <button onClick={() => setPreviewForm(null)} className="text-white/50 hover:text-white transition p-2">
                     <span className="text-xl">←</span> Back to Editor
                  </button>
-                 <div className="h-4 w-[1px] bg-white/10 hidden sm:block"></div>
-                 <span className="text-xs font-bold text-white/40 uppercase tracking-widest hidden sm:block">Previewing: {previewForm.title}</span>
               </div>
 
               <div className="flex items-center bg-white/5 p-1 rounded-xl">
@@ -525,7 +508,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                 onClick={() => { setPreviewForm(null); setShowCodeModal(previewForm); }}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-emerald-900/20"
               >
-                Get Code
+                Get Embed Code
               </button>
            </div>
 
@@ -539,18 +522,6 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                       : 'w-full max-w-5xl h-full rounded-2xl border border-white/10'
                   }`}
                 >
-                   {/* Mobile Hardware Details */}
-                   {previewDevice === 'mobile' && (
-                      <>
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-10 flex items-center justify-center">
-                          <div className="w-8 h-1 bg-white/20 rounded-full"></div>
-                        </div>
-                        <div className="absolute -right-[14px] top-24 w-[3px] h-12 bg-slate-800 rounded-l-md"></div>
-                        <div className="absolute -left-[14px] top-20 w-[3px] h-10 bg-slate-800 rounded-r-md"></div>
-                        <div className="absolute -left-[14px] top-32 w-[3px] h-10 bg-slate-800 rounded-r-md"></div>
-                      </>
-                   )}
-                   
                    <div className="flex-1 overflow-y-auto no-scrollbar rounded-[2rem] md:rounded-2xl bg-white">
                       <div className="flex flex-col gap-6 pb-12">
                          {previewForm.sections.map(sec => {
@@ -574,22 +545,14 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                                  return (
                                     <div key={sec.id} className="px-8 md:px-12">
                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
-                                       <div className="flex gap-4">
-                                          <div className="relative flex-[2]">
-                                             <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
-                                                {previewForm.productIds.length > 0 ? (
-                                                  previewForm.productIds.map(pid => (
-                                                     <option key={pid}>{products.find(p => p.id === pid)?.name}</option>
-                                                  ))
-                                                ) : (
-                                                  <option>No products selected</option>
-                                                )}
-                                             </select>
-                                             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
-                                          </div>
-                                          <div className="flex-1">
-                                             <input disabled type="number" defaultValue="1" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm text-center text-slate-400" />
-                                          </div>
+                                       <div className="relative">
+                                          <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-800 font-bold">
+                                             <option>Select Ginger Shot Package...</option>
+                                             {PACKAGES.map(p => (
+                                                <option key={p.qty}>{p.label}</option>
+                                             ))}
+                                          </select>
+                                          <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
                                        </div>
                                     </div>
                                  );
@@ -599,7 +562,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
                                        <div className="relative">
                                           <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
-                                             {states.map(s => <option key={s.id}>{s.name}</option>)}
+                                             {states.length > 0 ? states.map(s => <option key={s.id}>{s.name}</option>) : <option>States not configured</option>}
                                           </select>
                                           <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
                                        </div>
@@ -634,12 +597,6 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                                {previewForm.submitButtonText}
                             </button>
                             <p className="text-[9px] text-center text-slate-300 mt-8 uppercase font-black tracking-[0.1em]">Magira Distribution CRM</p>
-                            
-                            {previewForm.thankYouUrl && (
-                              <div className="mt-8 p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-[10px] font-black text-center border border-emerald-100">
-                                 ✨ WILL REDIRECT TO: {previewForm.thankYouUrl}
-                              </div>
-                            )}
                          </div>
                       </div>
                    </div>
