@@ -24,6 +24,14 @@ const PACKAGES = [
   { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Free)', qty: 30, price: 500000 },
 ];
 
+const NIGERIA_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", 
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", 
+  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", 
+  "Sokoto", "Taraba", "Yobe", "Zamfara", "Federal Capital Territory (FCT)"
+];
+
 const FormBuilder: React.FC = () => {
   const [forms, setForms] = useState<OrderForm[]>(db.getForms());
   const [products] = useState<Product[]>(db.getProducts());
@@ -92,7 +100,7 @@ const FormBuilder: React.FC = () => {
       `<option value='{"qty":${pkg.qty}, "price":${pkg.price}}'>${pkg.label}</option>`
     ).join('\n            ');
 
-    const stateOptions = states.map(s => `<option value="${s.id}">${s.name}</option>`).join('\n            ');
+    const stateOptions = NIGERIA_STATES.map(s => `<option value="${s}">${s}</option>`).join('\n            ');
 
     const sectionsHtml = form.sections.map(sec => {
       switch (sec.type) {
@@ -122,7 +130,7 @@ const FormBuilder: React.FC = () => {
           return `
     <div style="padding: 0 24px;">
       <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'State'}</label>
-      <select name="stateId" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
+      <select name="stateName" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
         <option value="">-- Select State --</option>
         ${stateOptions}
       </select>
@@ -171,8 +179,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
     customerName: rawData.customerName,
     phone: rawData.phone,
     address: rawData.address,
-    stateId: rawData.stateId,
-    // Ginger Shot (assuming a default ID if none exists, or identify by name)
+    stateName: rawData.stateName,
     productId: 'GINGER-SHOT-500ML', 
     quantity: pkg.qty,
     totalPrice: pkg.price,
@@ -306,7 +313,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
             <div className="p-8 space-y-4">
               <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 mb-2">
                  <p className="text-[10px] text-amber-800 font-bold uppercase tracking-widest">Note</p>
-                 <p className="text-xs text-amber-900 mt-1">This form is optimized for the <strong>Ginger Shot</strong> package offers you requested.</p>
+                 <p className="text-xs text-amber-900 mt-1">This form is optimized for the <strong>Ginger Shot</strong> package offers and includes all 36 Nigerian states.</p>
               </div>
               <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-x-auto max-h-[400px] leading-relaxed font-mono relative group">
                 {getEmbedCode(showCodeModal)}
@@ -421,12 +428,19 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
 
                         {(section.type === 'PRODUCTS') && (
                            <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col gap-2">
-                              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Static Package List</span>
-                              <p className="text-[11px] text-emerald-800 leading-relaxed italic">The form will show your fixed price tiers (1-30 bottles) as a dropdown.</p>
+                              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Fixed Package Tiers</span>
+                              <p className="text-[11px] text-emerald-800 leading-relaxed italic">Displays the 9 standard Ginger Shot pricing packages (1-30 bottles).</p>
                            </div>
                         )}
 
-                        {(section.type === 'CONTACT' || section.type === 'ADDRESS' || section.type === 'LOCATION') && (
+                        {(section.type === 'LOCATION') && (
+                           <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col gap-2">
+                              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Full Nigerian States List</span>
+                              <p className="text-[11px] text-blue-800 leading-relaxed italic">Dropdown containing all 36 states + FCT for customer selection.</p>
+                           </div>
+                        )}
+
+                        {(section.type === 'CONTACT' || section.type === 'ADDRESS') && (
                            <div className="bg-slate-50 h-10 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center">
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dynamic {section.type} Block</span>
                            </div>
@@ -561,8 +575,9 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                                     <div key={sec.id} className="px-8 md:px-12">
                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
                                        <div className="relative">
-                                          <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
-                                             {states.length > 0 ? states.map(s => <option key={s.id}>{s.name}</option>) : <option>States not configured</option>}
+                                          <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-800">
+                                             <option>Select State Hub...</option>
+                                             {NIGERIA_STATES.map(s => <option key={s}>{s}</option>)}
                                           </select>
                                           <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
                                        </div>

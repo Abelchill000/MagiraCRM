@@ -24,18 +24,15 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     if (!selectedLead || !convDetails.stateId) return;
 
     // Detect if this is a specialized Ginger Shot package lead
-    // If it is, the lead should ideally contain a totalPrice in its metadata (simulated here)
-    const isSpecialPackage = selectedLead.productId === 'GINGER-SHOT-500ML' || selectedLead.items.some(i => i.productId === 'GINGER-SHOT-500ML');
+    const isSpecialPackage = selectedLead.items.some(i => i.productId === 'GINGER-SHOT-500ML');
     
-    // Calculate totals
     const orderItems: OrderItem[] = selectedLead.items.map(item => {
-      // Find actual product in inventory or use placeholder
       const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
       return {
         productId: p?.id || item.productId,
         productName: p?.name || 'Ginger Shot (500ml)',
         quantity: item.quantity,
-        priceAtOrder: p?.sellingPrice || 20000, // Default to single unit price
+        priceAtOrder: p?.sellingPrice || 20000, 
         costAtOrder: p?.costPrice || 5000
       };
     });
@@ -83,7 +80,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     setLeads([...db.getLeads()]);
     setShowConvertModal(false);
     setSelectedLead(null);
-    alert(`Lead converted! Total Amount applied: ₦${total.toLocaleString()}`);
+    alert(`Lead converted! Package Price applied: ₦${total.toLocaleString()}`);
   };
 
   const generateMockLead = () => {
@@ -95,16 +92,17 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const form = forms[0];
     const tiers = [1, 2, 3, 6, 8, 10, 15, 18, 30];
     const randomQty = tiers[Math.floor(Math.random() * tiers.length)];
+    const randomState = ["Lagos", "Abuja", "Enugu", "Kano", "Port Harcourt"][Math.floor(Math.random() * 5)];
     
     const newLead: WebLead = {
       id: 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
       formId: form.id,
-      customerName: ['Musa Okoro', 'Adebayo Balogun', 'Blessing Uche', 'Chioma Ndu', 'John Ibrahim'][Math.floor(Math.random() * 5)],
+      customerName: ['Tunde Lawson', 'Chika Obi', 'Ibrahim Musa', 'Hauwa Adamu', 'Uche Kelvin'][Math.floor(Math.random() * 5)],
       phone: '080' + Math.floor(10000000 + Math.random() * 90000000),
-      address: 'Lagos Island, Street Address Section',
+      address: 'Plot 4, Magira Street, ' + randomState,
       items: [{ productId: 'GINGER-SHOT-500ML', quantity: randomQty }],
       status: LeadStatus.NEW,
-      notes: `Simulated package lead for ${randomQty} bottles.`,
+      notes: `Lead from package dropdown for ${randomQty} units.`,
       createdAt: new Date().toISOString()
     };
     db.createLead(newLead);
@@ -149,7 +147,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       <p className="font-bold text-slate-800">{lead.customerName}</p>
                       <p className="text-xs text-slate-500">{lead.phone}</p>
                       <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
-                        {new Date(lead.createdAt).toLocaleDateString()} at {new Date(lead.createdAt).toLocaleTimeString()}
+                        Captured: {new Date(lead.createdAt).toLocaleString()}
                       </p>
                     </td>
                     <td className="px-6 py-4">
@@ -170,7 +168,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       <div className="flex flex-wrap gap-1">
                         {lead.items.map((item, idx) => (
                           <span key={idx} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-lg">
-                            Ginger Shot x{item.quantity}
+                            Ginger Shot Package x{item.quantity}
                           </span>
                         ))}
                       </div>
@@ -179,7 +177,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       <div className="flex justify-end space-x-2">
                         <button 
                           onClick={() => window.open(`tel:${lead.phone}`)}
-                          className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition"
+                          className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition"
                           title="Call Lead"
                         >
                           📞
