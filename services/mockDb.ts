@@ -1,8 +1,7 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, doc, setDoc, getDoc, getDocs, 
-  updateDoc, onSnapshot, query, where, addDoc, deleteDoc 
+  updateDoc, onSnapshot, Unsubscribe, query, limit 
 } from 'firebase/firestore';
 import { 
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
@@ -10,17 +9,18 @@ import {
 } from 'firebase/auth';
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
-  PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
+  DeliveryStatus, OrderForm, WebLead, LeadStatus 
 } from '../types';
 
-// Replace with your actual Firebase config from the Firebase Console
+// Real Firebase configuration
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "magira-distribution.firebaseapp.com",
-  projectId: "magira-distribution",
-  storageBucket: "magira-distribution.appspot.com",
-  messagingSenderId: "REPLACE_WITH_YOUR_ID",
-  appId: "REPLACE_WITH_YOUR_APP_ID"
+  apiKey: "AIzaSyDjIST5wP--TJhSxmbDqvgTSHUUFeMJVwE",
+  authDomain: "magiracrm.firebaseapp.com",
+  projectId: "magiracrm",
+  storageBucket: "magiracrm.firebasestorage.app",
+  messagingSenderId: "960782141874",
+  appId: "1:960782141874:web:c8ba969930b2b5dd0b7cab",
+  measurementId: "G-CC1R1BDWTJ"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -50,40 +50,79 @@ class FirebaseDb {
 
   private currentUser: User | null = null;
   private listeners: Set<Listener> = new Set();
-  private unsubscribers: (() => void)[] = [];
+  private unsubscribers: Unsubscribe[] = [];
 
   constructor() {
     this.initAuth();
-    this.initRealtimeSync();
   }
 
   private initAuth() {
     onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
-        const userDoc = await getDoc(doc(firestore, 'users', fbUser.uid));
-        if (userDoc.exists()) {
-          this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
+        try {
+          const userDoc = await getDoc(doc(firestore, 'users', fbUser.uid));
+          if (userDoc.exists()) {
+            this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
+            this.initRealtimeSync();
+          } else {
+            this.currentUser = null;
+            this.stopRealtimeSync();
+          }
+        } catch (err) {
+          console.error("Auth doc fetch error:", err);
+          this.currentUser = null;
+          this.stopRealtimeSync();
         }
       } else {
         this.currentUser = null;
+        this.stopRealtimeSync();
       }
       this.notify();
     });
   }
 
   private initRealtimeSync() {
-    const collections = ['products', 'states', 'logistics', 'orders', 'forms', 'leads', 'users'];
+    this.stopRealtimeSync();
+    if (!this.currentUser) return;
+
+    const isAdmin = this.currentUser.role === UserRole.ADMIN;
+    const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads'];
     
-    collections.forEach(colName => {
-      const unsub = onSnapshot(collection(firestore, colName), (snapshot) => {
-        this.data[colName as keyof typeof this.data] = snapshot.docs.map(d => ({
-          id: d.id,
-          ...d.data()
-        })) as any;
-        this.notify();
+    if (isAdmin) {
+      collectionsToSync.push('users');
+    } else {
+      const unsubOwnProfile = onSnapshot(doc(firestore, 'users', this.currentUser.id), (snapshot) => {
+        if (snapshot.exists()) {
+          this.currentUser = { id: snapshot.id, ...snapshot.data() } as User;
+          this.notify();
+        }
       });
+      this.unsubscribers.push(unsubOwnProfile);
+    }
+
+    collectionsToSync.forEach(colName => {
+      const unsub = onSnapshot(
+        collection(firestore, colName), 
+        (snapshot) => {
+          this.data[colName as keyof typeof this.data] = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+          })) as any;
+          this.notify();
+        },
+        (error) => {
+          if (!error.message.includes('permission-denied')) {
+            console.warn(`Firestore sync error on ${colName}:`, error.message);
+          }
+        }
+      );
       this.unsubscribers.push(unsub);
     });
+  }
+
+  private stopRealtimeSync() {
+    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers = [];
   }
 
   subscribe(listener: Listener) {
@@ -99,21 +138,36 @@ class FirebaseDb {
   getCurrentUser() { return this.currentUser; }
   getUsers() { return [...this.data.users]; }
 
-  async register(name: string, email: string, password: string, role: UserRole) {
+  async register(name: string, email: string, password: string, requestedRole: UserRole) {
+    // Check if any users exist in the system
+    const userQuery = query(collection(firestore, 'users'), limit(1));
+    const userSnapshot = await getDocs(userQuery);
+    const isFirstUser = userSnapshot.empty;
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
     
+    // If it's the first user, force them to be an Admin
+    const finalRole = isFirstUser ? UserRole.ADMIN : requestedRole;
+    const finalStatus = isFirstUser ? 'approved' : 'pending';
+
     const userData: Partial<User> = {
       name,
       email,
-      role,
-      status: role === UserRole.ADMIN ? 'approved' : 'pending',
-      isApproved: role === UserRole.ADMIN,
+      role: finalRole,
+      status: finalStatus as any,
+      isApproved: finalStatus === 'approved',
       registeredAt: new Date().toISOString()
     };
 
     await setDoc(doc(firestore, 'users', uid), userData);
-    return { id: uid, ...userData } as User;
+    
+    const newUser = { id: uid, ...userData } as User;
+    if (isFirstUser) {
+        this.currentUser = newUser;
+        this.notify();
+    }
+    return newUser;
   }
 
   async login(email: string, password?: string) {
@@ -121,7 +175,7 @@ class FirebaseDb {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const userDoc = await getDoc(doc(firestore, 'users', userCredential.user.uid));
     
-    if (!userDoc.exists()) throw new Error("Profile missing");
+    if (!userDoc.exists()) throw new Error("Profile missing from database");
     const profile = userDoc.data() as User;
     
     if (profile.status === 'pending') throw new Error("Account pending approval");
@@ -131,6 +185,7 @@ class FirebaseDb {
   }
 
   async logout() {
+    this.stopRealtimeSync();
     await signOut(auth);
   }
 
@@ -170,6 +225,7 @@ class FirebaseDb {
     if (extra?.logisticsCost !== undefined) updates.logisticsCost = extra.logisticsCost;
     if (extra?.rescheduleDate) updates.rescheduleDate = extra.rescheduleDate;
     if (extra?.rescheduleNotes) updates.rescheduleNotes = extra.rescheduleNotes;
+    if (extra?.reminderEnabled !== undefined) updates.reminderEnabled = extra.reminderEnabled;
     
     await updateDoc(doc(firestore, 'orders', orderId), updates);
   }
@@ -230,9 +286,7 @@ class FirebaseDb {
   }
 
   async clearAllData() {
-    // Danger: This only works if you have permission to delete everything
-    // Use the Firebase Console for bulk deletions in production
-    console.warn("Bulk clear requested. Please use Firebase Console for safety.");
+    console.warn("Manual data purge requested.");
   }
 }
 
