@@ -62,7 +62,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     alert('Lead successfully converted to Order!');
   };
 
-  // Simulation: Generate a mock lead
+  // Simulation: Generate a mock lead with manual quantity selection simulation
   const generateMockLead = () => {
     const forms = db.getForms();
     if (forms.length === 0) {
@@ -70,15 +70,16 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       return;
     }
     const form = forms[0];
+    const randomQty = Math.floor(Math.random() * 5) + 1;
     const newLead: WebLead = {
       id: 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
       formId: form.id,
-      customerName: ['Chinedu Obi', 'Fatima Musa', 'Segun Arinze', 'Bolu Ade'][Math.floor(Math.random() * 4)],
+      customerName: ['Chinedu Obi', 'Fatima Musa', 'Segun Arinze', 'Bolu Ade', 'Kelechi Iheanacho'][Math.floor(Math.random() * 5)],
       phone: '080' + Math.floor(10000000 + Math.random() * 90000000),
       address: '123 Fake Street, Distribution District',
-      items: [{ productId: form.productIds[0], quantity: 1 }],
+      items: [{ productId: form.productIds[0] || 'p1', quantity: randomQty }],
       status: LeadStatus.NEW,
-      notes: '',
+      notes: `Customer requested ${randomQty} units manually via form.`,
       createdAt: new Date().toISOString()
     };
     db.createLead(newLead);

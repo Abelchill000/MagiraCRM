@@ -108,12 +108,19 @@ const FormBuilder: React.FC = () => {
     </div>`;
         case 'PRODUCTS':
           return `
-    <div style="padding: 0 24px;">
-      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">${sec.label || 'Products'}</label>
-      <select name="productId" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
-        <option value="">-- Select Option --</option>
-        ${productOptions}
-      </select>
+    <div style="padding: 0 24px; display: flex; flex-direction: column; gap: 8px;">
+      <label style="display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${sec.label || 'Products'}</label>
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 2;">
+          <select name="productId" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; background: white;">
+            <option value="">-- Select Product --</option>
+            ${productOptions}
+          </select>
+        </div>
+        <div style="flex: 1;">
+          <input type="number" name="quantity" value="1" min="1" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box;" placeholder="Qty">
+        </div>
+      </div>
     </div>`;
         case 'LOCATION':
           return `
@@ -164,6 +171,8 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
   btn.disabled = true;
   btn.innerText = 'Processing Order...';
   
+  // Note: For multi-product support, you might want to structure items as an array.
+  // In this simple version, we capture productId and quantity directly.
   console.log('Lead Captured:', data);
   
   setTimeout(() => {
@@ -565,17 +574,22 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                                  return (
                                     <div key={sec.id} className="px-8 md:px-12">
                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
-                                       <div className="relative">
-                                          <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
-                                             {previewForm.productIds.length > 0 ? (
-                                               previewForm.productIds.map(pid => (
-                                                  <option key={pid}>{products.find(p => p.id === pid)?.name}</option>
-                                               ))
-                                             ) : (
-                                               <option>No products selected</option>
-                                             )}
-                                          </select>
-                                          <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
+                                       <div className="flex gap-4">
+                                          <div className="relative flex-[2]">
+                                             <select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none text-slate-400">
+                                                {previewForm.productIds.length > 0 ? (
+                                                  previewForm.productIds.map(pid => (
+                                                     <option key={pid}>{products.find(p => p.id === pid)?.name}</option>
+                                                  ))
+                                                ) : (
+                                                  <option>No products selected</option>
+                                                )}
+                                             </select>
+                                             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300">▼</div>
+                                          </div>
+                                          <div className="flex-1">
+                                             <input disabled type="number" defaultValue="1" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm text-center text-slate-400" />
+                                          </div>
                                        </div>
                                     </div>
                                  );
