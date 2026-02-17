@@ -2,7 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, doc, setDoc, getDoc, 
-  updateDoc, onSnapshot, Unsubscribe 
+  updateDoc, onSnapshot, Unsubscribe, deleteDoc 
 } from 'firebase/firestore';
 import { 
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
@@ -255,6 +255,9 @@ class FirebaseDb {
   async createLead(lead: WebLead) {
     const { id, ...rest } = lead;
     await setDoc(doc(firestore, 'leads', id), rest);
+  }
+  async deleteLead(leadId: string) {
+    await deleteDoc(doc(firestore, 'leads', leadId));
   }
   async updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
     const updates: any = { status };

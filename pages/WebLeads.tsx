@@ -14,6 +14,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     paymentStatus: PaymentStatus.POD
   });
 
+  const isAdmin = userRole === UserRole.ADMIN;
+
   // Subscribe to real-time database changes
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -25,6 +27,16 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    if (window.confirm("Are you sure you want to permanently delete this lead? This action cannot be undone.")) {
+      try {
+        await db.deleteLead(id);
+      } catch (err) {
+        alert("Failed to delete lead. Check permissions.");
+      }
+    }
   };
 
   const handleConvert = async (e: React.FormEvent) => {
@@ -216,6 +228,15 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                             className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition"
                           >
                             Convert
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button 
+                            onClick={() => handleDeleteLead(lead.id)}
+                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                            title="Delete Lead"
+                          >
+                            🗑️
                           </button>
                         )}
                       </div>
