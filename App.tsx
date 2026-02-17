@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { db } from './services/mockDb.ts';
 import { User, UserRole } from './types.ts';
@@ -12,6 +13,7 @@ import Analytics from './pages/Analytics.tsx';
 import FormBuilder from './pages/FormBuilder.tsx';
 import WebLeads from './pages/WebLeads.tsx';
 import UserManagement from './pages/UserManagement.tsx';
+import DatabaseExplorer from './pages/DatabaseExplorer.tsx';
 
 // Components
 import Sidebar from './components/Sidebar.tsx';
@@ -29,56 +31,59 @@ const App: React.FC = () => {
   const [signUpData, setSignUpData] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
+    const unsub = db.subscribe(() => {
+      setUser(db.getCurrentUser());
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
     }
   }, [activeTab]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     try {
-      const loggedUser = db.login(emailInput, passwordInput);
+      const loggedUser = await db.login(emailInput, passwordInput);
       setUser(loggedUser);
     } catch (err: any) {
       setAuthError(err.message);
-      if (err.message === 'Account pending approval') {
+      if (err.message.includes('pending')) {
         setAuthView('pending');
       }
     }
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     setIsRegistering(true);
     
-    // Slight delay to allow UI feedback for the agent
-    setTimeout(() => {
-      try {
-        db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
-        setAuthView('pending');
-      } catch (err: any) {
-        // If registration fails, let the user know specifically that Admin won't see them
-        setAuthError(err.message || 'Critical Registration Failure: Your data could not be verified in the system. The admin will NOT receive your application.');
-      } finally {
-        setIsRegistering(false);
-      }
-    }, 1000);
+    try {
+      await db.register(signUpData.name, signUpData.email, signUpData.password, UserRole.SALES_AGENT);
+      setAuthView('pending');
+    } catch (err: any) {
+      setAuthError(err.message || 'Firebase Registration Failure');
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
-  const handleLogout = () => {
-    db.logout();
+  const handleLogout = async () => {
+    await db.logout();
     setUser(null);
     setAuthView('login');
     setPasswordInput('');
   };
 
-  const handleRoleSwitch = (newRole: UserRole) => {
-    const updatedUser = db.switchUserRole(newRole);
+  const handleRoleSwitch = async (newRole: UserRole) => {
+    const updatedUser = await db.switchUserRole(newRole);
     if (updatedUser) {
       setUser({ ...updatedUser });
-      if (newRole === UserRole.SALES_AGENT && (activeTab === 'analytics' || activeTab === 'formbuilder' || activeTab === 'users')) {
+      if (newRole === UserRole.SALES_AGENT && (activeTab === 'analytics' || activeTab === 'formbuilder' || activeTab === 'users' || activeTab === 'database')) {
         setActiveTab('dashboard');
       }
     }
@@ -91,7 +96,7 @@ const App: React.FC = () => {
           <div className="text-center mb-10">
             <div className="w-16 h-16 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-emerald-200 mb-4">M</div>
             <h1 className="text-3xl font-black text-slate-800">Magira CRM</h1>
-            <p className="text-slate-500 mt-2 text-sm font-medium">Distribution & Sales Management</p>
+            <p className="text-slate-500 mt-2 text-sm font-medium">Cloud Integrated Distribution Management</p>
           </div>
 
           {authView === 'login' && (
@@ -118,7 +123,7 @@ const App: React.FC = () => {
                 />
               </div>
               <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-200 transition">
-                Enter Dashboard
+                Secure Cloud Login
               </button>
               <div className="text-center pt-4">
                 <button type="button" onClick={() => { setAuthError(''); setAuthView('signup'); }} className="text-xs font-bold text-emerald-600 hover:underline">
@@ -132,12 +137,7 @@ const App: React.FC = () => {
             <form onSubmit={handleSignUp} className="space-y-4">
               {authError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-2xl animate-in shake duration-500">
-                  <div className="flex items-center gap-2 mb-2 text-red-700">
-                    <span className="text-lg">⚠️</span>
-                    <p className="text-xs font-black uppercase tracking-tight">Registration Failed</p>
-                  </div>
                   <p className="text-[11px] text-red-600 leading-relaxed font-medium">{authError}</p>
-                  <p className="text-[9px] text-red-400 mt-2 italic font-bold">Important: If this persists, the Admin Access Control panel will not show your name.</p>
                 </div>
               )}
               <div className="space-y-4">
@@ -177,10 +177,10 @@ const App: React.FC = () => {
                 {isRegistering ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Verifying Records...
+                    Creating Account...
                   </>
                 ) : (
-                  'Submit Application'
+                  'Create Secure Profile'
                 )}
               </button>
               <div className="text-center pt-4">
@@ -193,12 +193,12 @@ const App: React.FC = () => {
 
           {authView === 'pending' && (
             <div className="text-center py-6 animate-in slide-in-from-bottom-4">
-              <div className="text-6xl mb-6">✅</div>
-              <h2 className="text-2xl font-black text-slate-800">Application Verified</h2>
+              <div className="text-6xl mb-6">🌩️</div>
+              <h2 className="text-2xl font-black text-slate-800">Cloud Sync Successful</h2>
               <p className="text-slate-500 text-sm mt-4 px-4 leading-relaxed">
-                Your agent profile has been successfully saved to our master records.
+                Your profile is now in our cloud database.
                 <br /><br />
-                <strong className="text-emerald-600">Admin Approval Required:</strong> You will appear in the "Awaiting Approval" list for the administrator immediately.
+                <strong className="text-emerald-600">Security Gate:</strong> An administrator must review and approve your account before you can access the dashboard.
               </p>
               <button onClick={() => setAuthView('login')} className="mt-8 text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-6 py-3 rounded-full hover:bg-emerald-100 transition">
                 Return to Login
@@ -221,25 +221,16 @@ const App: React.FC = () => {
       case 'formbuilder': return <FormBuilder />;
       case 'leads': return <WebLeads userRole={user.role} />;
       case 'users': return <UserManagement />;
+      case 'database': return <DatabaseExplorer />;
       default: return <Dashboard />;
     }
   };
 
-  const mobileQuickActions = [
-    { id: 'leads', icon: '⚡', label: 'Leads' },
-    { id: 'orders', icon: '🛒', label: 'Orders' },
-    { id: 'logistics', icon: '🚚', label: 'Logistics' },
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-hidden">
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -247,7 +238,6 @@ const App: React.FC = () => {
         setIsOpen={setSidebarOpen} 
         userRole={user.role}
       />
-      
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
         <Navbar 
           user={user} 
@@ -255,34 +245,11 @@ const App: React.FC = () => {
           onRoleSwitch={handleRoleSwitch}
           toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} 
         />
-        
         <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden pb-24 md:pb-8">
           <div className="max-w-7xl mx-auto">
             {renderContent()}
           </div>
         </main>
-
-        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 w-full max-w-sm">
-          <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 p-2 flex items-center justify-around">
-            <button 
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'dashboard' ? 'text-emerald-400' : 'text-slate-400'}`}
-            >
-              <span className="text-lg">📊</span>
-              <span className="text-[9px] font-black uppercase tracking-widest">Home</span>
-            </button>
-            {mobileQuickActions.map(action => (
-              <button 
-                key={action.id}
-                onClick={() => setActiveTab(action.id)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === action.id ? 'text-emerald-400' : 'text-slate-400'}`}
-              >
-                <span className="text-lg">{action.icon}</span>
-                <span className="text-[9px] font-black uppercase tracking-widest">{action.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UserRole } from '../types.ts';
 
@@ -24,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'formbuilder', label: 'Form Builder', icon: '🧱', roles: [UserRole.ADMIN] },
     { id: 'logistics', label: 'Logistics', icon: '🚚', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] },
     { id: 'users', label: 'User Approvals', icon: '👤', roles: [UserRole.ADMIN] },
+    { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN] },
     { id: 'whatsapp', label: 'WhatsApp Hub', icon: '📱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
   ];

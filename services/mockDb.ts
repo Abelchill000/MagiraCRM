@@ -1,72 +1,88 @@
+
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, collection, doc, setDoc, getDoc, getDocs, 
+  updateDoc, onSnapshot, query, where, addDoc, deleteDoc 
+} from 'firebase/firestore';
+import { 
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
+  signOut, onAuthStateChanged 
+} from 'firebase/auth';
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
   PaymentStatus, DeliveryStatus, OrderForm, WebLead, LeadStatus 
 } from '../types';
 
-const STORAGE_KEY = 'magira_crm_data_v3'; 
-
-interface AppData {
-  products: Product[];
-  states: State[];
-  logistics: LogisticsPartner[];
-  orders: Order[];
-  forms: OrderForm[];
-  leads: WebLead[];
-  users: User[];
-  currentUser: User | null;
-}
-
-const INITIAL_DATA: AppData = {
-  products: [
-    {
-      id: 'p1',
-      name: 'Ginger Shot (100ml)',
-      sku: 'GSHOT-01',
-      costPrice: 500,
-      sellingPrice: 1200,
-      batchNumber: 'B-001',
-      expiryDate: '2025-12-31',
-      totalStock: 500,
-      stockPerState: { 's1': 50, 's2': 30 },
-      lowStockThreshold: 10
-    }
-  ],
-  states: [
-    { id: 's1', name: 'Lagos', whatsappGroupLink: 'https://chat.whatsapp.com/example-lagos' },
-    { id: 's2', name: 'Abuja', whatsappGroupLink: 'https://chat.whatsapp.com/example-abuja' }
-  ],
-  logistics: [],
-  orders: [],
-  forms: [],
-  leads: [],
-  users: [
-    {
-      id: 'u-admin',
-      name: 'Admin Magira',
-      email: 'admin@magiracrm.store',
-      password: 'password123',
-      role: UserRole.ADMIN,
-      isApproved: true,
-      status: 'approved',
-      registeredAt: new Date().toISOString()
-    }
-  ],
-  currentUser: null
+// Replace with your actual Firebase config from the Firebase Console
+const firebaseConfig = {
+  apiKey: "REPLACE_WITH_YOUR_API_KEY",
+  authDomain: "magira-distribution.firebaseapp.com",
+  projectId: "magira-distribution",
+  storageBucket: "magira-distribution.appspot.com",
+  messagingSenderId: "REPLACE_WITH_YOUR_ID",
+  appId: "REPLACE_WITH_YOUR_APP_ID"
 };
+
+const app = initializeApp(firebaseConfig);
+const firestore = getFirestore(app);
+const auth = getAuth(app);
 
 type Listener = () => void;
 
-class MockDb {
-  private data: AppData;
+class FirebaseDb {
+  private data: {
+    products: Product[];
+    states: State[];
+    logistics: LogisticsPartner[];
+    orders: Order[];
+    forms: OrderForm[];
+    leads: WebLead[];
+    users: User[];
+  } = {
+    products: [],
+    states: [],
+    logistics: [],
+    orders: [],
+    forms: [],
+    leads: [],
+    users: []
+  };
+
+  private currentUser: User | null = null;
   private listeners: Set<Listener> = new Set();
+  private unsubscribers: (() => void)[] = [];
 
   constructor() {
-    this.data = this.load();
-    window.addEventListener('storage', (e) => {
-      if (e.key === STORAGE_KEY) {
-        this.data = this.load();
-        this.notify();
+    this.initAuth();
+    this.initRealtimeSync();
+  }
+
+  private initAuth() {
+    onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const userDoc = await getDoc(doc(firestore, 'users', fbUser.uid));
+        if (userDoc.exists()) {
+          this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
+        }
+      } else {
+        this.currentUser = null;
       }
+      this.notify();
+    });
+  }
+
+  private initRealtimeSync() {
+    const collections = ['products', 'states', 'logistics', 'orders', 'forms', 'leads', 'users'];
+    
+    collections.forEach(colName => {
+      const unsub = onSnapshot(collection(firestore, colName), (snapshot) => {
+        this.data[colName as keyof typeof this.data] = snapshot.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        })) as any;
+        this.notify();
+      });
+      this.unsubscribers.push(unsub);
     });
   }
 
@@ -79,276 +95,145 @@ class MockDb {
     this.listeners.forEach(l => l());
   }
 
-  private load(): AppData {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    let parsed: any;
-    
-    if (saved) {
-      try {
-        parsed = JSON.parse(saved);
-      } catch (e) {
-        parsed = JSON.parse(JSON.stringify(INITIAL_DATA));
-      }
-    } else {
-      parsed = JSON.parse(JSON.stringify(INITIAL_DATA));
-    }
-
-    if (!parsed.users || !Array.isArray(parsed.users)) {
-      parsed.users = JSON.parse(JSON.stringify(INITIAL_DATA.users));
-    }
-    
-    let changed = false;
-    const adminIdx = parsed.users.findIndex((u: User) => u.email === 'admin@magiracrm.store');
-    if (adminIdx === -1) {
-      parsed.users.push(INITIAL_DATA.users[0]);
-      changed = true;
-    } else {
-      if (parsed.users[adminIdx].status !== 'approved') {
-        parsed.users[adminIdx].status = 'approved';
-        parsed.users[adminIdx].isApproved = true;
-        changed = true;
-      }
-    }
-
-    // Ensure all users have at least a fallback status
-    parsed.users = parsed.users.map((u: any) => {
-      if (!u.status) {
-        u.status = u.isApproved ? 'approved' : 'pending';
-        changed = true;
-      }
-      return u;
-    });
-
-    if (changed) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-    }
-
-    return parsed;
-  }
-
-  private save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
-      this.notify();
-      return true;
-    } catch (e) {
-      console.error("Storage Save Failed", e);
-      return false;
-    }
-  }
-
-  private sync() {
-    this.data = this.load();
-  }
-
   // --- AUTH ---
-  getCurrentUser() { return this.data.currentUser; }
-  
-  getUsers() { 
-    this.sync(); 
-    // Always return a deep copy to prevent accidental mutations hiding data
-    return JSON.parse(JSON.stringify(this.data.users)); 
-  }
+  getCurrentUser() { return this.currentUser; }
+  getUsers() { return [...this.data.users]; }
 
-  register(name: string, email: string, password: string, role: UserRole) {
-    this.sync();
-    const cleanEmail = email.toLowerCase().trim();
-    if (this.data.users.some(u => u.email.toLowerCase() === cleanEmail)) {
-      throw new Error('This email is already registered.');
-    }
-
-    const newUser: User = {
-      id: 'u-' + Math.random().toString(36).substr(2, 9),
-      name: name.trim(),
-      email: cleanEmail,
-      password,
+  async register(name: string, email: string, password: string, role: UserRole) {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = userCredential.user.uid;
+    
+    const userData: Partial<User> = {
+      name,
+      email,
       role,
-      isApproved: role === UserRole.ADMIN,
       status: role === UserRole.ADMIN ? 'approved' : 'pending',
+      isApproved: role === UserRole.ADMIN,
       registeredAt: new Date().toISOString()
     };
 
-    this.data.users.push(newUser);
-    
-    // 1. Attempt Save
-    const saveSuccess = this.save();
-    if (!saveSuccess) {
-      throw new Error('SYSTEM ERROR: Your browser refused to save registration data. Admin will NOT see your request. Please disable Private Mode or clear cache.');
-    }
-
-    // 2. Final Persistence Verification
-    this.sync(); // Force read back from localStorage
-    const verifiedUser = this.data.users.find(u => u.email.toLowerCase() === cleanEmail);
-    
-    if (!verifiedUser) {
-      throw new Error('SYNC ERROR: Registration was sent but failed to finalize in database. The admin panel will NOT show your profile.');
-    }
-
-    console.log('User registered & verified:', cleanEmail);
-    return newUser;
+    await setDoc(doc(firestore, 'users', uid), userData);
+    return { id: uid, ...userData } as User;
   }
 
-  login(email: string, password?: string) {
-    this.sync();
-    const cleanEmail = email.toLowerCase().trim();
-    const user = this.data.users.find(u => u.email.toLowerCase() === cleanEmail);
+  async login(email: string, password?: string) {
+    if (!password) throw new Error("Password required");
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userDoc = await getDoc(doc(firestore, 'users', userCredential.user.uid));
     
-    if (!user) throw new Error('Account not found.');
-    if (user.password && password !== user.password) throw new Error('Incorrect password.');
+    if (!userDoc.exists()) throw new Error("Profile missing");
+    const profile = userDoc.data() as User;
     
-    if (user.status === 'pending') throw new Error('Account pending approval');
-    if (user.status === 'rejected') throw new Error('Account access denied');
+    if (profile.status === 'pending') throw new Error("Account pending approval");
+    if (profile.status === 'rejected') throw new Error("Account access denied");
     
-    this.data.currentUser = user;
-    this.save();
-    return user;
+    return { id: userCredential.user.uid, ...profile } as User;
   }
 
-  switchUserRole(newRole: UserRole) {
-    this.sync();
-    if (this.data.currentUser) {
-      this.data.currentUser.role = newRole;
-      const userIdx = this.data.users.findIndex(u => u.id === this.data.currentUser?.id);
-      if (userIdx !== -1) {
-        this.data.users[userIdx].role = newRole;
-      }
-      this.save();
-      return this.data.currentUser;
+  async logout() {
+    await signOut(auth);
+  }
+
+  async approveUser(userId: string) {
+    await updateDoc(doc(firestore, 'users', userId), { status: 'approved', isApproved: true });
+  }
+
+  async rejectUser(userId: string) {
+    await updateDoc(doc(firestore, 'users', userId), { status: 'rejected', isApproved: false });
+  }
+
+  async switchUserRole(newRole: UserRole) {
+    if (this.currentUser) {
+      await updateDoc(doc(firestore, 'users', this.currentUser.id), { role: newRole });
+      this.currentUser.role = newRole;
+      this.notify();
+      return this.currentUser;
     }
     return null;
   }
 
-  approveUser(userId: string) {
-    this.sync();
-    const user = this.data.users.find(u => u.id === userId);
-    if (user) {
-      user.isApproved = true;
-      user.status = 'approved';
-      this.save();
-    }
-  }
-
-  rejectUser(userId: string) {
-    this.sync();
-    const user = this.data.users.find(u => u.id === userId);
-    if (user) {
-      user.isApproved = false;
-      user.status = 'rejected';
-      this.save();
-    }
-  }
-
-  logout() {
-    this.data.currentUser = null;
-    this.save();
-  }
-
   // --- DATA OPERATIONS ---
-  getProducts() { this.sync(); return JSON.parse(JSON.stringify(this.data.products)); }
-  saveProduct(product: Product) {
-    this.sync();
-    const idx = this.data.products.findIndex(p => p.id === product.id);
-    if (idx >= 0) this.data.products[idx] = product;
-    else this.data.products.push(product);
-    this.save();
+  getProducts() { return [...this.data.products]; }
+  async saveProduct(product: Product) {
+    const { id, ...rest } = product;
+    await setDoc(doc(firestore, 'products', id), rest);
   }
-  
-  getOrders() { this.sync(); return JSON.parse(JSON.stringify(this.data.orders)); }
-  createOrder(order: Order) {
-    this.sync();
-    this.data.orders.push(order);
-    this.save();
+
+  getOrders() { return [...this.data.orders]; }
+  async createOrder(order: Order) {
+    const { id, ...rest } = order;
+    await setDoc(doc(firestore, 'orders', id), rest);
   }
-  
-  updateOrderStatus(orderId: string, status: DeliveryStatus, extra?: any) {
-    this.sync();
-    const order = this.data.orders.find(o => o.id === orderId);
-    if (!order) return;
+
+  async updateOrderStatus(orderId: string, status: DeliveryStatus, extra?: any) {
+    const updates: any = { deliveryStatus: status };
+    if (extra?.logisticsCost !== undefined) updates.logisticsCost = extra.logisticsCost;
+    if (extra?.rescheduleDate) updates.rescheduleDate = extra.rescheduleDate;
+    if (extra?.rescheduleNotes) updates.rescheduleNotes = extra.rescheduleNotes;
     
-    const oldStatus = order.deliveryStatus;
-    order.deliveryStatus = status;
-    if (extra?.logisticsCost !== undefined) order.logisticsCost = extra.logisticsCost;
-    
-    if (status === DeliveryStatus.DELIVERED && oldStatus !== DeliveryStatus.DELIVERED) {
-      order.items.forEach(item => {
-        const product = this.data.products.find(p => p.id === item.productId);
-        if (product && product.stockPerState[order.stateId] !== undefined) {
-          product.stockPerState[order.stateId] -= item.quantity;
-        }
-      });
-    }
-    this.save();
+    await updateDoc(doc(firestore, 'orders', orderId), updates);
   }
 
-  getStates() { this.sync(); return JSON.parse(JSON.stringify(this.data.states)); }
-  saveState(state: State) {
-    this.sync();
-    const idx = this.data.states.findIndex(s => s.id === state.id);
-    if (idx >= 0) this.data.states[idx] = state;
-    else this.data.states.push(state);
-    this.save();
+  getStates() { return [...this.data.states]; }
+  async saveState(state: State) {
+    const { id, ...rest } = state;
+    await setDoc(doc(firestore, 'states', id), rest);
   }
 
-  getLogistics() { this.sync(); return JSON.parse(JSON.stringify(this.data.logistics)); }
-  saveLogistics(partner: LogisticsPartner) {
-    this.sync();
-    const idx = this.data.logistics.findIndex(l => l.id === partner.id);
-    if (idx >= 0) this.data.logistics[idx] = partner;
-    else this.data.logistics.push(partner);
-    this.save();
+  getLogistics() { return [...this.data.logistics]; }
+  async saveLogistics(partner: LogisticsPartner) {
+    const { id, ...rest } = partner;
+    await setDoc(doc(firestore, 'logistics', id), rest);
   }
 
-  getForms() { this.sync(); return JSON.parse(JSON.stringify(this.data.forms)); }
-  saveForm(form: OrderForm) {
-    this.sync();
-    const idx = this.data.forms.findIndex(f => f.id === form.id);
-    if (idx >= 0) this.data.forms[idx] = form;
-    else this.data.forms.push(form);
-    this.save();
+  getForms() { return [...this.data.forms]; }
+  async saveForm(form: OrderForm) {
+    const { id, ...rest } = form;
+    await setDoc(doc(firestore, 'forms', id), rest);
   }
 
-  getLeads() { this.sync(); return JSON.parse(JSON.stringify(this.data.leads)); }
-  createLead(lead: WebLead) {
-    this.sync();
-    this.data.leads.push(lead);
-    this.save();
+  getLeads() { return [...this.data.leads]; }
+  async createLead(lead: WebLead) {
+    const { id, ...rest } = lead;
+    await setDoc(doc(firestore, 'leads', id), rest);
   }
 
-  updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
-    this.sync();
-    const lead = this.data.leads.find(l => l.id === leadId);
-    if (lead) {
-      lead.status = status;
-      if (notes) lead.notes = notes;
-      this.save();
-    }
+  async updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
+    const updates: any = { status };
+    if (notes) updates.notes = notes;
+    await updateDoc(doc(firestore, 'leads', leadId), updates);
   }
 
-  transferStock(productId: string, stateId: string, quantity: number) {
-    this.sync();
+  async transferStock(productId: string, stateId: string, quantity: number) {
     const product = this.data.products.find(p => p.id === productId);
     if (product && product.totalStock >= quantity) {
-      product.totalStock -= quantity;
-      product.stockPerState[stateId] = (product.stockPerState[stateId] || 0) + quantity;
-      this.save();
+      const newTotal = product.totalStock - quantity;
+      const newStateQty = (product.stockPerState[stateId] || 0) + quantity;
+      
+      await updateDoc(doc(firestore, 'products', productId), {
+        totalStock: newTotal,
+        [`stockPerState.${stateId}`]: newStateQty
+      });
       return true;
     }
     return false;
   }
 
-  restockStateHub(productId: string, stateId: string, quantity: number) {
-    this.sync();
+  async restockStateHub(productId: string, stateId: string, quantity: number) {
     const product = this.data.products.find(p => p.id === productId);
     if (product) {
-      product.stockPerState[stateId] = (product.stockPerState[stateId] || 0) + quantity;
-      this.save();
+      const newQty = (product.stockPerState[stateId] || 0) + quantity;
+      await updateDoc(doc(firestore, 'products', productId), {
+        [`stockPerState.${stateId}`]: newQty
+      });
     }
   }
-  
-  clearAllData() {
-    localStorage.removeItem(STORAGE_KEY);
-    window.location.reload();
+
+  async clearAllData() {
+    // Danger: This only works if you have permission to delete everything
+    // Use the Firebase Console for bulk deletions in production
+    console.warn("Bulk clear requested. Please use Firebase Console for safety.");
   }
 }
 
-export const db = new MockDb();
+export const db = new FirebaseDb();
