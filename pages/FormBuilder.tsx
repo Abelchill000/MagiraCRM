@@ -182,7 +182,7 @@ const FormBuilder: React.FC = () => {
       }
     }).join('\n');
 
-    return `<!-- Magira Landing Page: ${form.title} -->
+    return `<!-- Magira Landing Page Form: ${form.title} -->
 <div id="magira-container-${form.id}" style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 20px auto; border: 1px solid #f1f5f9; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08); background: white;">
   <form id="magira-form-${form.id}" style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 32px;">
     ${sectionsHtml}
@@ -191,54 +191,101 @@ const FormBuilder: React.FC = () => {
       <button type="submit" style="width: 100%; background-color: ${form.themeColor}; color: white; border: none; padding: 18px; border-radius: 16px; font-weight: 900; font-size: 16px; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 15px -3px ${form.themeColor}33;">
         ${form.submitButtonText}
       </button>
-      <p style="text-align: center; margin: 16px 0 0 0; font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Powered by Magira Distribution CRM</p>
+      <p style="text-align: center; margin: 16px 0 0 0; font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Secure Fulfillment via Magira CRM</p>
     </div>
   </form>
 </div>
 
 <script>
-document.getElementById('magira-form-${form.id}').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const formData = new FormData(this);
-  const rawData = Object.fromEntries(formData.entries());
+(function() {
+  const formId = "${form.id}";
+  const apiKey = "AIzaSyDjIST5wP--TJhSxmbDqvgTSHUUFeMJVwE";
+  const projectId = "magiracrm";
   
-  let pkg = { qty: 1, price: 0 };
-  try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
+  document.getElementById('magira-form-' + formId).addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button');
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerText = 'Transmitting Order...';
+    
+    const formData = new FormData(this);
+    const rawData = Object.fromEntries(formData.entries());
+    
+    let pkg = { qty: 1, price: 0 };
+    try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
 
-  const payload = {
-    customerName: rawData.customerName,
-    phone: rawData.phone,
-    whatsapp: rawData.whatsapp,
-    address: rawData.address,
-    deliveryInstructions: rawData.deliveryInstructions,
-    stateName: rawData.stateName,
-    productId: 'GINGER-SHOT-500ML', 
-    quantity: pkg.qty,
-    totalPrice: pkg.price,
-    formId: '${form.id}'
-  };
+    const leadId = 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const payload = {
+      id: leadId,
+      formId: formId,
+      customerName: rawData.customerName,
+      phone: rawData.phone,
+      whatsapp: rawData.whatsapp,
+      address: rawData.address,
+      deliveryInstructions: rawData.deliveryInstructions || '',
+      status: 'New Lead',
+      notes: 'Captured from live landing page: ${form.title}',
+      createdAt: new Date().toISOString(),
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }]
+    };
 
-  const btn = this.querySelector('button');
-  btn.disabled = true;
-  btn.innerText = 'Transmitting...';
-  
-  console.log('Lead Captured:', payload);
-  
-  setTimeout(() => {
-    const thankYouUrl = "${form.thankYouUrl || ''}";
-    if (thankYouUrl) {
-      window.location.href = thankYouUrl;
-    } else {
-      document.getElementById('magira-container-${form.id}').innerHTML = \`
-        <div style="padding: 80px 40px; text-align: center; color: #1e293b;">
-          <div style="font-size: 72px; margin-bottom: 24px;">✅</div>
-          <h3 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900;">Order Captured!</h3>
-          <p style="color: #64748b; font-size: 15px; line-height: 1.7;">${form.successMessage}</p>
-        </div>
-      \`;
+    try {
+      // Direct REST API Call to Firestore
+      const response = await fetch(\`https://firestore.googleapis.com/v1/projects/\${projectId}/databases/(default)/documents/leads?documentId=\${leadId}&key=\${apiKey}\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            id: { stringValue: payload.id },
+            formId: { stringValue: payload.formId },
+            customerName: { stringValue: payload.customerName },
+            phone: { stringValue: payload.phone },
+            whatsapp: { stringValue: payload.whatsapp || '' },
+            address: { stringValue: payload.address },
+            deliveryInstructions: { stringValue: payload.deliveryInstructions },
+            status: { stringValue: payload.status },
+            notes: { stringValue: payload.notes },
+            createdAt: { stringValue: payload.createdAt },
+            items: {
+              arrayValue: {
+                values: payload.items.map(i => ({
+                  mapValue: {
+                    fields: {
+                      productId: { stringValue: i.productId },
+                      quantity: { integerValue: i.quantity }
+                    }
+                  }
+                }))
+              }
+            }
+          }
+        })
+      });
+
+      if (!response.ok) throw new Error('Transmission Failed');
+
+      const thankYouUrl = "${form.thankYouUrl || ''}";
+      if (thankYouUrl) {
+        window.location.href = thankYouUrl;
+      } else {
+        document.getElementById('magira-container-' + formId).innerHTML = \`
+          <div style="padding: 80px 40px; text-align: center; color: #1e293b;">
+            <div style="font-size: 72px; margin-bottom: 24px;">✅</div>
+            <h3 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900;">Order Captured!</h3>
+            <p style="color: #64748b; font-size: 15px; line-height: 1.7;">${form.successMessage}</p>
+          </div>
+        \`;
+      }
+    } catch (error) {
+      console.error('Magira Error:', error);
+      alert('There was a connection error. Please try again or contact support.');
+      btn.disabled = false;
+      btn.innerText = originalText;
     }
-  }, 1200);
-});
+  });
+})();
 </script>`;
   };
 
