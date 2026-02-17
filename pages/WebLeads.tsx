@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb';
 import { WebLead, LeadStatus, UserRole, State, PaymentStatus, DeliveryStatus, Order, OrderItem } from '../types';
 
 const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [leads, setLeads] = useState<WebLead[]>(db.getLeads());
-  const [states] = useState<State[]>(db.getStates());
+  const [states, setStates] = useState<State[]>(db.getStates());
   const [products] = useState(db.getProducts());
   const [selectedLead, setSelectedLead] = useState<WebLead | null>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
@@ -14,12 +14,20 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     paymentStatus: PaymentStatus.POD
   });
 
+  // Subscribe to real-time database changes
+  useEffect(() => {
+    const unsubscribe = db.subscribe(() => {
+      setLeads(db.getLeads());
+      setStates(db.getStates());
+    });
+    return unsubscribe;
+  }, []);
+
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
-    setLeads([...db.getLeads()]);
   };
 
-  const handleConvert = (e: React.FormEvent) => {
+  const handleConvert = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLead || !convDetails.stateId) return;
 
@@ -77,9 +85,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       leadId: selectedLead.id
     };
 
-    db.createOrder(order);
-    db.updateLeadStatus(selectedLead.id, LeadStatus.VERIFIED, 'Converted to order ' + order.id);
-    setLeads([...db.getLeads()]);
+    await db.createOrder(order);
+    await db.updateLeadStatus(selectedLead.id, LeadStatus.VERIFIED, 'Converted to order ' + order.id);
     setShowConvertModal(false);
     setSelectedLead(null);
     alert(`Lead converted! Package Price applied: ₦${total.toLocaleString()}`);
@@ -110,7 +117,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       createdAt: new Date().toISOString()
     };
     db.createLead(newLead);
-    setLeads([...db.getLeads()]);
   };
 
   return (
@@ -146,7 +152,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400">No leads captured yet. Use Form Builder to get started.</td>
                 </tr>
               ) : (
-                leads.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(lead => (
+                [...leads].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(lead => (
                   <tr key={lead.id} className="hover:bg-slate-50/50 transition">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">{lead.customerName}</p>
@@ -183,7 +189,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                     </td>
                     <td className="px-6 py-4 max-w-[200px]">
                       <p className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">
-                        {lead.deliveryInstructions || <span className="text-slate-300 italic">No special instructions</span>}
+                        {lead.deliveryInstructions || <span className="text-slate-300 italic text-[9px]">No instructions</span>}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-right">
