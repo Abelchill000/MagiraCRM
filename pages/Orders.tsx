@@ -32,7 +32,6 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   const isAdmin = user.role === UserRole.ADMIN;
   const isAgent = user.role === UserRole.SALES_AGENT;
 
-  // Filter orders: Admins see all, others only see their own
   const orders = useMemo(() => {
     if (isAdmin) return dbOrders;
     return dbOrders.filter(o => o.createdBy === user.name);
@@ -44,10 +43,8 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     
     const existing = newOrder.items?.find(i => i.productId === productId);
     if (existing) {
-      const updated = newOrder.items?.map(i => 
-        i.productId === productId ? { ...i, quantity: i.quantity + 1 } : i
-      );
-      setNewOrder({ ...newOrder, items: updated });
+      // If it exists, we just let the user edit the quantity in the list
+      return;
     } else {
       const item: OrderItem = {
         productId: product.id,
@@ -60,9 +57,9 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     }
   };
 
-  const handleUpdateItemPrice = (productId: string, newPrice: number) => {
+  const handleUpdateItemQuantity = (productId: string, qty: number) => {
     const updated = newOrder.items?.map(i => 
-      i.productId === productId ? { ...i, priceAtOrder: newPrice } : i
+      i.productId === productId ? { ...i, quantity: Math.max(1, qty) } : i
     );
     setNewOrder({ ...newOrder, items: updated });
   };
@@ -74,7 +71,10 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const handleCreateOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newOrder.items?.length) return;
+    if (!newOrder.items?.length) {
+      alert("Please add at least one item to the selection.");
+      return;
+    }
 
     const total = newOrder.items.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0);
     const order: Order = {
@@ -357,80 +357,148 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
       {/* Create Order Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-0 md:p-4 z-50">
-          <div className="bg-white md:rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-full md:h-[85vh]">
+          <div className="bg-white md:rounded-2xl w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-full md:h-[85vh]">
             {/* Header Mobile Only */}
             <div className="md:hidden p-4 border-b flex justify-between items-center shrink-0">
-              <h2 className="font-black text-slate-800">New Order</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 p-2">✕</button>
+              <h2 className="font-black text-slate-800">New Order Entry</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 p-2 text-xl">✕</button>
             </div>
 
-            <div className="flex-1 p-6 md:p-8 overflow-y-auto border-r border-slate-100">
-              <form onSubmit={handleCreateOrder} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex-1 p-6 md:p-8 overflow-y-auto border-r border-slate-100 flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Customer Details</h3>
+                <form id="order-main-form" onSubmit={handleCreateOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Customer Name</label>
-                    <input required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, customerName: e.target.value})} />
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Customer Name</label>
+                    <input required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, customerName: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Phone</label>
-                    <input required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Phone Number</label>
+                    <input required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">State</label>
-                    <select required className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, stateId: e.target.value})}>
-                      <option value="">-- Select --</option>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Target Hub (State)</label>
+                    <select required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 appearance-none" onChange={e => setNewOrder({...newOrder, stateId: e.target.value})}>
+                      <option value="">Select State</option>
                       {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700">Address</label>
-                    <textarea required rows={2} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-3" onChange={e => setNewOrder({...newOrder, address: e.target.value})} />
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Full Delivery Address</label>
+                    <textarea required rows={2} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, address: e.target.value})} />
                   </div>
-                </div>
-                
-                <div className="hidden md:flex pt-4 border-t border-slate-100 justify-between items-center">
-                   <button type="button" onClick={() => setShowCreateModal(false)} className="text-slate-400 font-medium">Cancel</button>
-                   <button type="submit" disabled={!newOrder.items?.length} className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold">
-                    Generate Order
-                   </button>
-                </div>
-              </form>
-            </div>
-
-            <div className="w-full md:w-96 bg-slate-50 p-6 flex flex-col border-l border-slate-200 shrink-0 h-[400px] md:h-auto overflow-hidden">
-              <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-between shrink-0">
-                <span>Catalog</span>
-                <span className="text-[10px] text-slate-400 uppercase font-black">Tap to Add</span>
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-1 gap-2 flex-1 overflow-y-auto mb-6 pr-1">
-                {products.map(p => (
-                  <button 
-                    key={p.id}
-                    onClick={() => handleAddItem(p.id)}
-                    className="w-full text-left bg-white border border-slate-200 p-3 rounded-xl hover:border-emerald-500 flex justify-between items-center group shrink-0"
-                  >
-                    <div>
-                      <p className="text-[11px] font-bold text-slate-800 line-clamp-1">{p.name}</p>
-                      <p className="text-[10px] text-emerald-600 font-black">₦{p.sellingPrice.toLocaleString()}</p>
-                    </div>
-                  </button>
-                ))}
+                </form>
               </div>
 
-              <div className="border-t border-slate-200 pt-4 shrink-0 bg-slate-50">
-                <div className="flex justify-between items-end mb-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cart Total</p>
-                    <p className="text-xl font-black text-slate-900 mt-1">
+              {/* Dynamic Selection List (CART) */}
+              <div className="flex-1 border-t border-slate-100 pt-6">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Selection Overview</h3>
+                <div className="space-y-3">
+                  {newOrder.items?.length === 0 ? (
+                    <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30">
+                      <p className="text-slate-400 text-xs font-bold">Your cart is currently empty.<br/>Add products from the catalog on the right.</p>
+                    </div>
+                  ) : (
+                    newOrder.items?.map(item => (
+                      <div key={item.productId} className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:border-emerald-200 transition-all group">
+                        <div className="flex-1">
+                          <p className="text-sm font-black text-slate-800">{item.productName}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">₦{item.priceAtOrder.toLocaleString()} per unit</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col items-center">
+                            <label className="text-[8px] font-black text-slate-300 uppercase mb-1">Quantity</label>
+                            <input 
+                              type="number" 
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateItemQuantity(item.productId, parseInt(e.target.value) || 1)}
+                              className="w-20 bg-slate-50 border-none rounded-lg px-2 py-1.5 text-center text-sm font-bold focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div className="text-right w-24">
+                            <p className="text-[8px] font-black text-slate-300 uppercase mb-1">Subtotal</p>
+                            <p className="text-sm font-black text-slate-900">₦{(item.priceAtOrder * item.quantity).toLocaleString()}</p>
+                          </div>
+                          <button 
+                            onClick={() => handleRemoveItem(item.productId)}
+                            className="p-2 text-slate-200 hover:text-red-500 transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="hidden md:flex pt-8 justify-between items-center border-t border-slate-100 mt-auto">
+                 <button type="button" onClick={() => setShowCreateModal(false)} className="text-slate-400 font-bold text-xs uppercase hover:text-slate-600 transition">Cancel Order</button>
+                 <button 
+                   type="submit" 
+                   form="order-main-form"
+                   disabled={!newOrder.items?.length} 
+                   className={`px-10 py-4 rounded-2xl font-black text-sm transition-all shadow-xl ${!newOrder.items?.length ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 hover:scale-[1.02]'}`}
+                 >
+                   Commit & Generate Order
+                 </button>
+              </div>
+            </div>
+
+            {/* Catalog Panel */}
+            <div className="w-full md:w-96 bg-slate-900 p-6 flex flex-col shrink-0 h-[450px] md:h-auto overflow-hidden text-white">
+              <div className="flex items-center justify-between mb-6 shrink-0">
+                <h3 className="font-black text-xs uppercase tracking-[0.2em] text-white/40">Item Catalog</h3>
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-1 rounded">Live Stock</span>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto mb-8 pr-2 no-scrollbar">
+                {products.map(p => {
+                  const isInCart = newOrder.items?.some(i => i.productId === p.id);
+                  return (
+                    <button 
+                      key={p.id}
+                      onClick={() => handleAddItem(p.id)}
+                      disabled={isInCart}
+                      className={`w-full text-left p-4 rounded-2xl transition-all border flex justify-between items-center group shrink-0 ${
+                        isInCart 
+                          ? 'bg-emerald-500/10 border-emerald-500/30 opacity-60 cursor-default' 
+                          : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className={`text-sm font-black truncate ${isInCart ? 'text-emerald-400' : 'text-white'}`}>{p.name}</p>
+                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">₦{p.sellingPrice.toLocaleString()}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         {isInCart ? (
+                           <span className="text-emerald-400 text-lg">✓</span>
+                         ) : (
+                           <span className="text-white/20 group-hover:text-white group-hover:scale-125 transition-all text-xl">＋</span>
+                         )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="border-t border-white/10 pt-6 shrink-0">
+                <div className="flex justify-between items-end">
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Grand Total</p>
+                    <p className="text-3xl font-black text-white mt-1">
                       ₦{newOrder.items?.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0).toLocaleString() || 0}
                     </p>
                   </div>
                   <button 
                     type="submit" 
-                    onClick={() => document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
-                    className="md:hidden bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm"
+                    form="order-main-form"
+                    className="md:hidden bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-emerald-950/20 active:scale-95 transition"
                   >
-                    Generate Order
+                    Commit Order
                   </button>
                 </div>
               </div>
