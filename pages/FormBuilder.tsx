@@ -23,10 +23,10 @@ const PACKAGES = [
   { label: '3 BOTTLES of 500ml @ ₦55,000', qty: 3, price: 55000 },
   { label: '6 BOTTLES of 500ml @ ₦90,000', qty: 6, price: 90000 },
   { label: '8 BOTTLES of 500ml @ ₦126,000', qty: 8, price: 126000 },
-  { label: '10 BOTTLES of 500ml @ ₦165,000 (Get 1 Free)', qty: 10, price: 165000 },
-  { label: '15 BOTTLES of 500ml @ ₦249,500 (Get 2 Free)', qty: 15, price: 249500 },
-  { label: '18 BOTTLES of 500ml @ ₦300,000 (Get 3 Free)', qty: 18, price: 300000 },
-  { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Free)', qty: 30, price: 500000 },
+  { label: '10 BOTTLES of 500ml @ ₦165,000 (Get 1 Free Bonus Bottle)', qty: 10, price: 165000 },
+  { label: '15 BOTTLES of 500ml @ ₦249,500 (Get 2 Free Bottles)', qty: 15, price: 249500 },
+  { label: '18 BOTTLES of 500ml @ ₦300,000 (Get 3 Free Bottles)', qty: 18, price: 300000 },
+  { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Free Bottles)', qty: 30, price: 500000 },
 ];
 
 const NIGERIA_STATES = [
