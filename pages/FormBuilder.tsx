@@ -415,15 +415,27 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mt-8">
-                     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Button Text</label>
-                        <input className="w-full text-xs font-bold bg-slate-50 border-none rounded-xl p-3" value={editingForm?.submitButtonText || ''} onChange={e => setEditingForm({...editingForm, submitButtonText: e.target.value})}/>
-                     </div>
-                     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Completion Msg</label>
-                        <input className="w-full text-xs font-bold bg-slate-50 border-none rounded-xl p-3" value={editingForm?.successMessage || ''} onChange={e => setEditingForm({...editingForm, successMessage: e.target.value})}/>
-                     </div>
+                  <div className="space-y-4 mt-8">
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Submit Button Text</label>
+                          <input className="w-full text-xs font-bold bg-slate-50 border-none rounded-xl p-3" value={editingForm?.submitButtonText || ''} onChange={e => setEditingForm({...editingForm, submitButtonText: e.target.value})}/>
+                       </div>
+                       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Success (Inner) Message</label>
+                          <input className="w-full text-xs font-bold bg-slate-50 border-none rounded-xl p-3" value={editingForm?.successMessage || ''} onChange={e => setEditingForm({...editingForm, successMessage: e.target.value})}/>
+                       </div>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Redirect URL (Thank You Page)</label>
+                       <input 
+                        className="w-full text-xs font-bold bg-slate-50 border-none rounded-xl p-3" 
+                        placeholder="https://yoursite.com/thank-you (Optional)"
+                        value={editingForm?.thankYouUrl || ''} 
+                        onChange={e => setEditingForm({...editingForm, thankYouUrl: e.target.value})}
+                       />
+                       <p className="text-[9px] text-slate-400 mt-2 font-medium italic">* If set, users will be redirected immediately after successful submission.</p>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-8 border-t border-slate-100 mt-12 pb-12">
