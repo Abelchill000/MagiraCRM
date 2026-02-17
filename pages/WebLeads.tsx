@@ -63,7 +63,9 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       trackingId: 'MAG-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
       customerName: selectedLead.customerName,
       phone: selectedLead.phone,
+      whatsapp: selectedLead.whatsapp,
       address: selectedLead.address,
+      deliveryInstructions: selectedLead.deliveryInstructions,
       stateId: convDetails.stateId,
       items: orderItems,
       totalAmount: total,
@@ -99,7 +101,9 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       formId: form.id,
       customerName: ['Tunde Lawson', 'Chika Obi', 'Ibrahim Musa', 'Hauwa Adamu', 'Uche Kelvin'][Math.floor(Math.random() * 5)],
       phone: '080' + Math.floor(10000000 + Math.random() * 90000000),
+      whatsapp: '081' + Math.floor(10000000 + Math.random() * 90000000),
       address: 'Plot 4, Magira Street, ' + randomState,
+      deliveryInstructions: 'Call me when you reach the gate.',
       items: [{ productId: 'GINGER-SHOT-500ML', quantity: randomQty }],
       status: LeadStatus.NEW,
       notes: `Lead from package dropdown for ${randomQty} units.`,
@@ -132,21 +136,25 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Lead Details</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Selection</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Instructions</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">No leads captured yet. Use Form Builder to get started.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">No leads captured yet. Use Form Builder to get started.</td>
                 </tr>
               ) : (
                 leads.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(lead => (
                   <tr key={lead.id} className="hover:bg-slate-50/50 transition">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800">{lead.customerName}</p>
-                      <p className="text-xs text-slate-500">{lead.phone}</p>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        <p className="text-[10px] text-slate-500 font-bold">📞 {lead.phone}</p>
+                        {lead.whatsapp && <p className="text-[10px] text-emerald-600 font-bold">📲 {lead.whatsapp}</p>}
+                      </div>
+                      <p className="text-[9px] text-slate-400 mt-2 uppercase font-black tracking-tighter">
                         Captured: {new Date(lead.createdAt).toLocaleString()}
                       </p>
                     </td>
@@ -168,16 +176,30 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       <div className="flex flex-wrap gap-1">
                         {lead.items.map((item, idx) => (
                           <span key={idx} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-lg">
-                            Ginger Shot Package x{item.quantity}
+                            Package x{item.quantity}
                           </span>
                         ))}
                       </div>
                     </td>
+                    <td className="px-6 py-4 max-w-[200px]">
+                      <p className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">
+                        {lead.deliveryInstructions || <span className="text-slate-300 italic">No special instructions</span>}
+                      </p>
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end space-x-2">
+                        {lead.whatsapp && (
+                          <button 
+                            onClick={() => window.open(`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`)}
+                            className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition"
+                            title="WhatsApp Lead"
+                          >
+                            📲
+                          </button>
+                        )}
                         <button 
                           onClick={() => window.open(`tel:${lead.phone}`)}
-                          className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition"
+                          className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition"
                           title="Call Lead"
                         >
                           📞
@@ -187,7 +209,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                             onClick={() => { setSelectedLead(lead); setShowConvertModal(true); }}
                             className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition"
                           >
-                            Convert to Order
+                            Convert
                           </button>
                         )}
                       </div>

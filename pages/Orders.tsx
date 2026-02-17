@@ -82,7 +82,9 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
       trackingId: 'MAG-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
       customerName: newOrder.customerName || '',
       phone: newOrder.phone || '',
+      whatsapp: newOrder.whatsapp || '',
       address: newOrder.address || '',
+      deliveryInstructions: newOrder.deliveryInstructions || '',
       stateId: newOrder.stateId || '',
       items: newOrder.items,
       totalAmount: total,
@@ -146,14 +148,26 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const copyReceiptText = (order: Order) => {
     const itemsText = order.items.map(i => `${i.productName} x${i.quantity} @ ₦${i.priceAtOrder.toLocaleString()}`).join('\n');
-    const text = `📜 MAGIRA RECEIPT\nOrder ID: ${order.id}\nCustomer: ${order.customerName}\nPhone: ${order.phone}\nAddress: ${order.address}\n---\nItems:\n${itemsText}\n---\nTotal: ₦${order.totalAmount.toLocaleString()}\nPayment: ${order.paymentStatus}\nTracking: ${order.trackingId}`.trim();
+    const text = `📜 MAGIRA RECEIPT
+Order ID: ${order.id}
+Customer: ${order.customerName}
+Phone: ${order.phone}
+${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Address: ${order.address}
+---
+Items:
+${itemsText}
+---
+${order.deliveryInstructions ? `Special Instructions: ${order.deliveryInstructions}\n---\n` : ''}Total: ₦${order.totalAmount.toLocaleString()}
+Payment: ${order.paymentStatus}
+Tracking: ${order.trackingId}`.trim();
     navigator.clipboard.writeText(text);
     alert('Receipt copied to clipboard!');
   };
 
   const shareWhatsApp = (order: Order) => {
+    const targetPhone = order.whatsapp || order.phone;
     const text = `Hello ${order.customerName}, your Magira order ${order.id} is ${order.deliveryStatus}. Tracking: ${order.trackingId}. Total: ₦${order.totalAmount}`;
-    const url = `https://wa.me/${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+    const url = `https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
@@ -193,13 +207,14 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Instructions</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">No orders found.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">No orders found.</td>
                 </tr>
               ) : (
                 orders.map(order => (
@@ -210,7 +225,10 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-slate-800">{order.customerName}</p>
-                      <p className="text-xs text-slate-500">{order.phone}</p>
+                      <div className="flex flex-col gap-0.5">
+                        <p className="text-[10px] text-slate-500 font-bold">📞 {order.phone}</p>
+                        {order.whatsapp && <p className="text-[10px] text-emerald-600 font-bold">📲 {order.whatsapp}</p>}
+                      </div>
                       {order.deliveryStatus === DeliveryStatus.RESCHEDULED && order.rescheduleDate && (
                         <p className="text-[10px] text-amber-600 font-bold mt-1">📅 Rescheduled: {order.rescheduleDate}</p>
                       )}
@@ -233,10 +251,15 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
                         <p className="text-[10px] text-red-500 font-bold">-{order.logisticsCost.toLocaleString()} logistics</p>
                       )}
                     </td>
+                    <td className="px-6 py-4 max-w-[200px]">
+                      <p className="text-[10px] text-slate-400 italic line-clamp-2">
+                        {order.deliveryInstructions || 'None'}
+                      </p>
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end space-x-2">
-                        <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-400 hover:text-emerald-600">📄</button>
-                        <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-400 hover:text-green-500">📲</button>
+                        <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-400 hover:text-emerald-600" title="Copy Receipt">📄</button>
+                        <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-400 hover:text-emerald-600" title="WhatsApp Customer">📲</button>
                       </div>
                     </td>
                   </tr>
@@ -260,13 +283,21 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
                 <div>
                   <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">ID: {order.id}</span>
                   <p className="mt-1 font-bold text-slate-800">{order.customerName}</p>
-                  <p className="text-xs text-slate-500">{order.phone}</p>
+                  <p className="text-xs text-slate-500">📞 {order.phone}</p>
+                  {order.whatsapp && <p className="text-xs text-emerald-600 font-bold">📲 {order.whatsapp}</p>}
                 </div>
                 <div className="text-right">
                   <p className="font-black text-slate-900">₦{order.totalAmount.toLocaleString()}</p>
                   <span className="text-[9px] text-slate-400 font-bold uppercase">Total</span>
                 </div>
               </div>
+
+              {order.deliveryInstructions && (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Instruction</p>
+                  <p className="text-[11px] text-slate-600 leading-tight italic">"{order.deliveryInstructions}"</p>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-50">
                 <select 
@@ -377,6 +408,10 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
                     <input required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
                   </div>
                   <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp Number</label>
+                    <input className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, whatsapp: e.target.value})} />
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Target Hub (State)</label>
                     <select required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 appearance-none" onChange={e => setNewOrder({...newOrder, stateId: e.target.value})}>
                       <option value="">Select State</option>
@@ -386,6 +421,10 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Full Delivery Address</label>
                     <textarea required rows={2} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" onChange={e => setNewOrder({...newOrder, address: e.target.value})} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Delivery Instructions</label>
+                    <textarea rows={2} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500" placeholder="e.g. Call before arrival..." onChange={e => setNewOrder({...newOrder, deliveryInstructions: e.target.value})} />
                   </div>
                 </form>
               </div>

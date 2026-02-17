@@ -68,7 +68,9 @@ export interface Order {
   trackingId: string;
   customerName: string;
   phone: string;
+  whatsapp?: string;
   address: string;
+  deliveryInstructions?: string;
   stateId: string;
   items: OrderItem[];
   totalAmount: number;
@@ -83,7 +85,7 @@ export interface Order {
   reminderEnabled?: boolean;
 }
 
-export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'LOCATION' | 'ADDRESS' | 'CUSTOM_TEXT' | 'BENEFITS' | 'TESTIMONIALS' | 'FAQ' | 'IMAGE';
+export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'LOCATION' | 'ADDRESS' | 'DELIVERY_INSTRUCTIONS' | 'CUSTOM_TEXT' | 'BENEFITS' | 'TESTIMONIALS' | 'FAQ' | 'IMAGE';
 
 export interface FormSection {
   id: string;
@@ -111,7 +113,9 @@ export interface WebLead {
   formId: string;
   customerName: string;
   phone: string;
+  whatsapp?: string;
   address: string;
+  deliveryInstructions?: string;
   stateId?: string;
   items: Array<{ productId: string; quantity: number }>;
   status: LeadStatus;

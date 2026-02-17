@@ -9,6 +9,7 @@ const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   PRODUCTS: { label: 'Choose Your Package' },
   LOCATION: { label: 'Your Delivery State' },
   ADDRESS: { label: 'Street Address' },
+  DELIVERY_INSTRUCTIONS: { label: 'Delivery Instructions', content: 'e.g. Leave at the gate, Call before arrival, etc.' },
   CUSTOM_TEXT: { label: 'Special Instructions', content: 'Delivery takes 24-48 hours.' },
   BENEFITS: { label: 'Why Choose Magira?', content: '100% Organic\nNo Preservatives\nInstant Energy\nRich in Vitamin C' },
   TESTIMONIALS: { label: 'Adebayo M.', content: '"The best ginger shot in Lagos. I feel energized all day!"' },
@@ -108,13 +109,15 @@ const FormBuilder: React.FC = () => {
         case 'IMAGE':
           return `<div style="width: 100%;"><img src="${sec.content}" style="width: 100%; display: block; height: auto;" alt="Magira Image"></div>`;
         case 'CONTACT':
-          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="phone" placeholder="Phone Number" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-size: 14px;"></div>`;
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="phone" placeholder="Phone Number (Call)" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="whatsapp" placeholder="WhatsApp Number" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-size: 14px;"></div>`;
         case 'PRODUCTS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="packageData" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px; font-weight: 600;"><option value="">-- Choose Ginger Shot Package --</option>${packageOptions}</select></div>`;
         case 'LOCATION':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="stateName" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px;"><option value="">-- Select State --</option>${stateOptions}</select></div>`;
         case 'ADDRESS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="Full Delivery Address" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
+        case 'DELIVERY_INSTRUCTIONS':
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="deliveryInstructions" rows="2" placeholder="${sec.content || 'Add specific instructions for the delivery agent...'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'BENEFITS':
           const benefits = (sec.content || '').split('\n').map(b => `<li style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #475569;"><span style="color: ${form.themeColor}; font-weight: bold;">✓</span> <span>${b.trim()}</span></li>`).join('');
           return `<div style="padding: 24px; background: #f8fafc; border-radius: 16px; margin: 0 24px;"><h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 800; color: #1e293b;">${sec.label}</h3><ul style="list-style: none; padding: 0; margin: 0;">${benefits}</ul></div>`;
@@ -154,7 +157,9 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
   const payload = {
     customerName: rawData.customerName,
     phone: rawData.phone,
+    whatsapp: rawData.whatsapp,
     address: rawData.address,
+    deliveryInstructions: rawData.deliveryInstructions,
     stateName: rawData.stateName,
     productId: 'GINGER-SHOT-500ML', 
     quantity: pkg.qty,
@@ -208,7 +213,8 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                { id: 'sec-3', type: 'PRODUCTS', label: 'Pick Your Package' },
                { id: 'sec-4', type: 'LOCATION', label: 'Shipping State' },
                { id: 'sec-5', type: 'CONTACT', label: 'Customer Info' },
-               { id: 'sec-6', type: 'ADDRESS', label: 'Delivery Address' }
+               { id: 'sec-6', type: 'ADDRESS', label: 'Delivery Address' },
+               { id: 'sec-7', type: 'DELIVERY_INSTRUCTIONS', label: 'Instructions' }
             ],
             submitButtonText: 'Secure My Order',
             successMessage: 'Order received. We will call you within 15 minutes to confirm.',
@@ -313,7 +319,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Essentials</p>
                   <div className="grid grid-cols-1 gap-2">
-                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS'] as SectionType[]).map(type => (
+                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS', 'DELIVERY_INSTRUCTIONS'] as SectionType[]).map(type => (
                       <button key={type} onClick={() => addSection(type)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-left hover:border-emerald-500 transition-all flex items-center gap-3 group">
                         <span className="bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{type.replace('_', ' ')}</span>
@@ -381,7 +387,7 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                            </div>
                         </div>
 
-                        {['HEADER', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ', 'IMAGE'].includes(section.type) && (
+                        {['HEADER', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ', 'IMAGE', 'DELIVERY_INSTRUCTIONS'].includes(section.type) && (
                           <textarea 
                             className="w-full text-sm bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 font-medium"
                             rows={section.type === 'BENEFITS' ? 4 : 2}
@@ -394,7 +400,8 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                             placeholder={
                               section.type === 'IMAGE' ? 'https://image-url.com' :
                               section.type === 'BENEFITS' ? 'One benefit per line...' : 
-                              section.type === 'TESTIMONIALS' ? 'Quote from customer...' : 'Enter content...'
+                              section.type === 'TESTIMONIALS' ? 'Quote from customer...' : 
+                              section.type === 'DELIVERY_INSTRUCTIONS' ? 'Placeholder for instructions...' : 'Enter content...'
                             }
                           />
                         )}
@@ -463,13 +470,15 @@ document.getElementById('magira-form-${form.id}').addEventListener('submit', fun
                             case 'IMAGE':
                               return <div key={sec.id} className="w-full"><img src={sec.content} className="w-full h-auto block" /></div>;
                             case 'CONTACT':
-                              return <div key={sec.id} className="px-10 space-y-4"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{sec.label}</label><input disabled placeholder="Full Name" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /><input disabled placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /></div>;
+                              return <div key={sec.id} className="px-10 space-y-4"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">{sec.label}</label><input disabled placeholder="Full Name" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /><input disabled placeholder="Phone Number" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /><input disabled placeholder="WhatsApp Number" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm" /></div>;
                             case 'PRODUCTS':
                               return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-800 appearance-none"><option>Select Ginger Shot Package...</option></select></div>;
                             case 'LOCATION':
                               return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><select disabled className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm appearance-none"><option>Select State Hub...</option></select></div>;
                             case 'ADDRESS':
                               return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><textarea disabled placeholder="Street, City, Area" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none" rows={2} /></div>;
+                            case 'DELIVERY_INSTRUCTIONS':
+                              return <div key={sec.id} className="px-10"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label><textarea disabled placeholder={sec.content || "e.g. Call before arrival"} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm resize-none" rows={2} /></div>;
                             case 'BENEFITS':
                               return <div key={sec.id} className="px-10"><div className="bg-slate-50 p-8 rounded-3xl"><h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">{sec.label}</h4><ul className="space-y-3">{sec.content?.split('\n').map((b, i) => <li key={i} className="flex items-center gap-3 text-sm text-slate-600 font-medium"><span style={{ color: previewForm.themeColor }}>✓</span> {b}</li>)}</ul></div></div>;
                             case 'TESTIMONIALS':
