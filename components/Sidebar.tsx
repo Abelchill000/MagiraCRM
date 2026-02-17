@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { UserRole } from '../types.ts';
+import { db } from '../services/mockDb.ts';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,6 +12,8 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, userRole }) => {
+  const pendingCount = db.getPendingUserCount();
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { 
@@ -22,7 +26,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'orders', label: 'Orders', icon: '🛒', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'formbuilder', label: 'Form Builder', icon: '🧱', roles: [UserRole.ADMIN] },
     { id: 'logistics', label: 'Logistics', icon: '🚚', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] },
-    { id: 'users', label: 'User Approvals', icon: '👤', roles: [UserRole.ADMIN] },
+    { 
+      id: 'users', 
+      label: 'User Approvals', 
+      icon: '👤', 
+      roles: [UserRole.ADMIN],
+      badge: pendingCount > 0 ? pendingCount : null 
+    },
     { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN] },
     { id: 'whatsapp', label: 'WhatsApp Hub', icon: '📱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
@@ -68,9 +78,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
               {item.icon}
             </span>
             {isOpen && (
-              <span className="font-medium whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
+              <span className="font-medium whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300 flex-1">
                 {item.label}
               </span>
+            )}
+
+            {item.badge && (
+               <span className={`
+                 flex items-center justify-center bg-red-500 text-white font-black rounded-full animate-bounce
+                 ${isOpen ? 'text-[9px] w-5 h-5 ml-auto' : 'absolute top-1 right-1 w-4 h-4 text-[7px]'}
+               `}>
+                 {item.badge}
+               </span>
             )}
             
             {!isOpen && activeTab === item.id && (

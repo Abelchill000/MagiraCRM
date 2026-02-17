@@ -24,14 +24,14 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onRoleSwitch, toggleSid
       </div>
 
       <div className="flex items-center space-x-2 md:space-x-6">
-        {/* Role Switcher - Desktop Only */}
-        {(isAdmin || isAgent) && (
+        {/* Role Switcher - ADMIN ONLY - allows viewing the app as an agent */}
+        {isAdmin && (
           <button
-            onClick={() => onRoleSwitch(isAdmin ? UserRole.SALES_AGENT : UserRole.ADMIN)}
+            onClick={() => onRoleSwitch(UserRole.SALES_AGENT)}
             className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700"
           >
             <span>🔄</span>
-            <span>{isAdmin ? 'Agent View' : 'Admin'}</span>
+            <span>Switch to Agent View</span>
           </button>
         )}
 
@@ -48,7 +48,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onRoleSwitch, toggleSid
             {user.name.charAt(0)}
           </div>
 
-          {/* Menu Toggle on the Right */}
           <button 
             onClick={toggleSidebar} 
             className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"

@@ -66,15 +66,16 @@ class FirebaseDb {
           
           if (userDoc.exists()) {
             this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
+            // ONLY start syncing data if the user is approved
             if (this.currentUser.isApproved) {
               this.initRealtimeSync();
+            } else {
+              this.stopRealtimeSync();
             }
           } else {
-            // Document might be missing if registration was interrupted
             this.currentUser = null;
           }
         } catch (err) {
-          console.error("Profile Fetch Error:", err);
           this.currentUser = null;
         }
       } else {
@@ -90,9 +91,11 @@ class FirebaseDb {
     this.stopRealtimeSync();
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
+    // Admin syncs users, others don't
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
     const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads'];
     
+    // Admins need to see the users collection to approve them
     if (isAdmin) {
       collectionsToSync.push('users');
     }
@@ -109,9 +112,8 @@ class FirebaseDb {
             this.notify();
           },
           (error) => {
-            // Quietly ignore permission errors as they are expected during role transitions
             if (!error.message.includes('permission-denied')) {
-              console.warn(`Firestore Sync Error [${colName}]:`, error.message);
+              console.warn(`Sync Warning [${colName}]:`, error.message);
             }
           }
         );
@@ -137,13 +139,16 @@ class FirebaseDb {
   isAuthReady() { return this.authInitialized; }
   getCurrentUser() { return this.currentUser; }
   getUsers() { return [...this.data.users]; }
+  
+  // Helper to count users waiting for approval (for sidebar badge)
+  getPendingUserCount() {
+    return this.data.users.filter(u => u.status === 'pending').length;
+  }
 
   async register(name: string, email: string, phone: string, password: string, requestedRole: UserRole) {
     const isBootstrapAdmin = email.toLowerCase() === 'admin@magiracrm.store';
-    
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
-    
     const finalRole = isBootstrapAdmin ? UserRole.ADMIN : requestedRole;
     const finalStatus = isBootstrapAdmin ? 'approved' : 'pending';
 
@@ -158,8 +163,6 @@ class FirebaseDb {
     };
 
     await setDoc(doc(firestore, 'users', uid), userData);
-    
-    // Update local state immediately
     this.currentUser = { id: uid, ...userData } as User;
     if (this.currentUser.isApproved) {
       this.initRealtimeSync();
@@ -173,7 +176,7 @@ class FirebaseDb {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const userDoc = await getDoc(doc(firestore, 'users', userCredential.user.uid));
     
-    if (!userDoc.exists()) throw new Error("Profile document not found.");
+    if (!userDoc.exists()) throw new Error("Profile not found.");
     const profile = userDoc.data() as User;
     
     if (profile.status === 'pending') throw new Error("Account pending approval");
@@ -193,16 +196,20 @@ class FirebaseDb {
   }
 
   async approveUser(userId: string) {
+    // Only admins can do this via Firestore rules, but we check local state too
+    if (this.currentUser?.role !== UserRole.ADMIN) return;
     await updateDoc(doc(firestore, 'users', userId), { status: 'approved', isApproved: true });
   }
 
   async rejectUser(userId: string) {
+    if (this.currentUser?.role !== UserRole.ADMIN) return;
     await updateDoc(doc(firestore, 'users', userId), { status: 'rejected', isApproved: false });
   }
 
   async switchUserRole(newRole: UserRole) {
-    if (this.currentUser) {
-      await updateDoc(doc(firestore, 'users', this.currentUser.id), { role: newRole });
+    // SECURITY: Only an Admin can change their own view for testing
+    // Or change others via the users collection.
+    if (this.currentUser?.role === UserRole.ADMIN) {
       this.currentUser.role = newRole;
       this.notify();
       return this.currentUser;

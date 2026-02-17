@@ -4,10 +4,14 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "index.tsx",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
+  },
+  "engines": {
+    "node": "18"
   },
   "dependencies": {
     "react": "18.2.0",

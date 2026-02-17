@@ -37,7 +37,7 @@ const App: React.FC = () => {
       setUser(currentUser);
       setIsReady(db.isAuthReady());
       
-      // If user is logged in but not approved, force pending view
+      // Strict redirect: If user is logged in but not approved, they MUST be on the pending screen
       if (currentUser && !currentUser.isApproved) {
         setAuthView('pending');
       }
@@ -78,7 +78,8 @@ const App: React.FC = () => {
         signUpData.password, 
         UserRole.SALES_AGENT
       );
-      // View switches automatically via subscriber
+      // After registration, user is logged in but isApproved is false, 
+      // subscriber handles the UI switch to 'pending'
     } catch (err: any) {
       setAuthError(err.message || 'Registration Failure');
     } finally {
@@ -95,6 +96,7 @@ const App: React.FC = () => {
   };
 
   const handleRoleSwitch = async (newRole: UserRole) => {
+    // Only Admin can do this (verified in mockDb.ts)
     const updatedUser = await db.switchUserRole(newRole);
     if (updatedUser) {
       setUser({ ...updatedUser });
@@ -104,17 +106,17 @@ const App: React.FC = () => {
     }
   };
 
-  // Auth Loading State
+  // 1. Initial Auth Check Loading
   if (!isReady) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-emerald-50">
         <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-emerald-900 font-black uppercase tracking-widest text-[10px]">Encrypting Cloud Session...</p>
+        <p className="text-emerald-900 font-black uppercase tracking-widest text-[10px]">Verifying Magira Access...</p>
       </div>
     );
   }
 
-  // Auth Guard
+  // 2. Auth Guard: If no user or user is logged in but not approved
   if (!user || !user.isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-emerald-50 p-4">
@@ -122,7 +124,7 @@ const App: React.FC = () => {
           <div className="text-center mb-10">
             <div className="w-16 h-16 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-emerald-200 mb-4">M</div>
             <h1 className="text-3xl font-black text-slate-800">Magira CRM</h1>
-            <p className="text-slate-500 mt-2 text-sm font-medium">Distribution Network Management</p>
+            <p className="text-slate-500 mt-2 text-sm font-medium">Distribution Network Hub</p>
           </div>
 
           {authView === 'login' && (
@@ -209,7 +211,7 @@ const App: React.FC = () => {
                 disabled={isRegistering}
                 className={`w-full text-white font-black py-4 rounded-xl shadow-lg transition mt-4 flex items-center justify-center gap-2 ${isRegistering ? 'bg-slate-400' : 'bg-slate-900 hover:bg-black'}`}
               >
-                {isRegistering ? 'Syncing...' : 'Request Access'}
+                {isRegistering ? 'Registering...' : 'Request System Access'}
               </button>
               <div className="text-center pt-4">
                 <button type="button" onClick={() => { setAuthError(''); setAuthView('login'); }} className="text-xs font-bold text-slate-400 hover:text-slate-600">
@@ -222,17 +224,18 @@ const App: React.FC = () => {
           {authView === 'pending' && (
             <div className="text-center py-6 animate-in slide-in-from-bottom-4">
               <div className="text-6xl mb-6">🌩️</div>
-              <h2 className="text-2xl font-black text-slate-800">Account Pending</h2>
+              <h2 className="text-2xl font-black text-slate-800">Review in Progress</h2>
               <p className="text-slate-500 text-sm mt-4 px-4 leading-relaxed">
-                Your profile is registered in our cloud database.
+                Your profile has been captured for Magira Distribution.
                 <br /><br />
-                <strong className="text-emerald-600">Security Requirement:</strong> An administrator must review your credentials and approve your access manually.
+                <strong className="text-emerald-600 font-black uppercase tracking-wider text-[11px]">Strict Security Policy:</strong><br />
+                Your dashboard access is currently locked. An administrator will review your application and approve your credentials shortly.
               </p>
               <button 
                 onClick={handleLogout} 
-                className="mt-8 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-red-500 transition"
+                className="mt-8 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-red-500 transition border border-slate-100 px-6 py-3 rounded-xl"
               >
-                Sign Out & Return
+                Log Out & Exit
               </button>
             </div>
           )}
@@ -241,6 +244,7 @@ const App: React.FC = () => {
     );
   }
 
+  // 3. Main Dashboard Rendering (Only for Approved Users)
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
