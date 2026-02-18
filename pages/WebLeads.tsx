@@ -17,6 +17,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   });
 
   const isAdmin = userRole === UserRole.ADMIN;
+  // Special access check for the specific agent email
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -29,12 +31,12 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 
   const sortedLeads = useMemo(() => {
     let filteredLeads = [...leads];
-    // Agents only see leads from their pages
-    if (!isAdmin && user) {
+    // Agents only see leads from their pages, unless they are an Admin or the designated Super Agent
+    if (!isAdmin && !isSuperAgent && user) {
       filteredLeads = filteredLeads.filter(l => l.agentName === user.name);
     }
     return filteredLeads.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [leads, isAdmin, user]);
+  }, [leads, isAdmin, isSuperAgent, user]);
 
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
@@ -48,6 +50,23 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
         alert("Failed to delete lead.");
       }
     }
+  };
+
+  const copyLeadDetails = (lead: WebLead) => {
+    const text = `
+🌿 MAGIRA LEAD CAPTURE
+-------------------------
+👤 Name: ${lead.customerName}
+📞 Phone: ${lead.phone}
+📲 WhatsApp: ${lead.whatsapp || 'N/A'}
+📍 Address: ${lead.address}
+📝 Instructions: ${lead.deliveryInstructions || 'None'}
+📅 Captured: ${new Date(lead.createdAt).toLocaleString()}
+👤 Agent: ${lead.agentName || 'Network'}
+-------------------------
+`.trim();
+    navigator.clipboard.writeText(text);
+    alert('Lead details copied to clipboard!');
   };
 
   const handleConvert = async (e: React.FormEvent) => {
@@ -115,9 +134,16 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Console</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Console</h1>
+            {isSuperAgent && !isAdmin && (
+              <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest border border-emerald-200">
+                Network Access Enabled
+              </span>
+            )}
+          </div>
           <p className="text-slate-500 text-sm font-medium">
-            {isAdmin ? "Network-wide lead capture monitoring." : `Showing your individual captured leads.`}
+            {(isAdmin || isSuperAgent) ? "Network-wide lead capture monitoring." : `Showing your individual captured leads.`}
           </p>
         </div>
       </div>
@@ -199,6 +225,13 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       </td>
                       <td className="px-8 py-5 text-right">
                         <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => copyLeadDetails(lead)} 
+                            className="p-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-800 hover:text-white transition shadow-sm"
+                            title="Copy Lead Details"
+                          >
+                            📋
+                          </button>
                           {lead.whatsapp && (
                             <button onClick={() => window.open(`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`)} className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition shadow-sm">📲</button>
                           )}
