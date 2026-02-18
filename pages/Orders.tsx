@@ -39,19 +39,13 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   }, []);
 
   const isAdmin = user.role === UserRole.ADMIN;
-  const isAgent = user.role === UserRole.SALES_AGENT;
-  // Special access check for the specific agent email
+  // Special access check for the specific emails
   const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
 
   const orders = useMemo(() => {
-    // If Admin OR the specified Super Agent emails, show ALL orders
-    const filtered = (isAdmin || isSuperAgent) 
-      ? dbOrders 
-      : dbOrders.filter(o => o.createdBy === user.name || o.createdBy === 'Lead Conversion');
-    
-    // Sort by newest first
-    return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [dbOrders, isAdmin, isSuperAgent, user.name]);
+    // Per user request, Agents and Admin can view ALL orders
+    return [...dbOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [dbOrders]);
 
   const handleAddItem = (productId: string) => {
     const product = products.find(p => p.id === productId);
@@ -221,7 +215,7 @@ Stay Healthy, Stay Energized!`.trim();
               <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Network Admin Mode</span>
             )}
           </h1>
-          <p className="text-slate-500 text-sm font-medium">Track shipments, payments, and customer deliveries.</p>
+          <p className="text-slate-500 text-sm font-medium">Global order tracking. Every user sees all orders as requested.</p>
         </div>
         <button 
           onClick={() => setShowCreateModal(true)}
@@ -247,7 +241,7 @@ Stay Healthy, Stay Energized!`.trim();
             <tbody className="divide-y divide-slate-50">
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No orders in database. Converted leads appear here automatically.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No orders in database.</td>
                 </tr>
               ) : (
                 orders.map(order => (
@@ -365,9 +359,9 @@ Stay Healthy, Stay Energized!`.trim();
                   <p className="text-lg font-black text-emerald-600">{viewingOrder.whatsapp || 'N/A'}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Region</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Hub / State</label>
                   <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                    {states.find(s => s.id === viewingOrder.stateId)?.name || 'General Network'}
+                    {states.find(s => s.id === viewingOrder.stateId || s.name === viewingOrder.stateId)?.name || 'General Network'}
                   </p>
                 </div>
                 <div className="md:col-span-2">

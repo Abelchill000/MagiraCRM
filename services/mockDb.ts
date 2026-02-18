@@ -272,13 +272,19 @@ class FirebaseDb {
     }
     return false;
   }
+  async updateStateHubStock(productId: string, stateId: string, newQuantity: number) {
+    const product = this.data.products.find(p => p.id === productId);
+    if (product) {
+      await updateDoc(doc(firestore, 'products', productId), {
+        [`stockPerState.${stateId}`]: Math.max(0, newQuantity)
+      });
+    }
+  }
   async restockStateHub(productId: string, stateId: string, quantity: number) {
     const product = this.data.products.find(p => p.id === productId);
     if (product) {
       const newQty = (product.stockPerState[stateId] || 0) + quantity;
-      await updateDoc(doc(firestore, 'products', productId), {
-        [`stockPerState.${stateId}`]: newQty
-      });
+      await this.updateStateHubStock(productId, stateId, newQty);
     }
   }
 }

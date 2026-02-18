@@ -74,7 +74,7 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               <div key={state.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between group">
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-slate-800">{state.name}</p>
-                  <p className="text-xs text-slate-500 truncate max-w-[200px]">{state.whatsappGroupLink}</p>
+                  <p className="text-xs text-slate-500 truncate max-w-[200px] font-mono">{state.whatsappGroupLink}</p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
@@ -120,19 +120,19 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       {showStateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6">{editingState ? 'Edit State Hub' : 'Add New State'}</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-6 uppercase tracking-tight font-black">{editingState ? 'Modify State Hub' : 'Register New State Hub'}</h2>
             <form onSubmit={handleAddState} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">State Name</label>
-                <input name="name" required defaultValue={editingState?.name || ''} placeholder="e.g. Enugu" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
+                <input name="name" required defaultValue={editingState?.name || ''} placeholder="e.g. Enugu" className="w-full border border-slate-200 rounded-lg px-4 py-2 font-bold" />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">WhatsApp Group Link</label>
-                <input name="whatsapp" required defaultValue={editingState?.whatsappGroupLink || ''} placeholder="https://chat.whatsapp.com/..." className="w-full border border-slate-200 rounded-lg px-4 py-2" />
+                <input name="whatsapp" required defaultValue={editingState?.whatsappGroupLink || ''} placeholder="https://chat.whatsapp.com/..." className="w-full border border-slate-200 rounded-lg px-4 py-2 font-mono text-sm" />
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button type="button" onClick={() => { setShowStateModal(false); setEditingState(null); }} className="text-slate-400">Cancel</button>
-                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold">Save Changes</button>
+                <button type="button" onClick={() => { setShowStateModal(false); setEditingState(null); }} className="text-slate-400 font-bold uppercase text-[10px]">Discard</button>
+                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-100">Save Repository</button>
               </div>
             </form>
           </div>
@@ -142,18 +142,18 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       {showLogisticsModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6">Register Partner</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-6 uppercase tracking-tight font-black">Register Partner</h2>
             <form onSubmit={handleAddLogistics} className="space-y-4">
               <input name="name" required placeholder="Company Name" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
               <select name="stateId" required className="w-full border border-slate-200 rounded-lg px-4 py-2">
-                <option value="">-- Assign to State --</option>
+                <option value="">-- Assign to State Hub --</option>
                 {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input name="contact" required placeholder="Contact Person Name" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
               <input name="phone" required placeholder="Phone Number" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
               <div className="flex justify-end space-x-3 mt-6">
-                <button type="button" onClick={() => setShowLogisticsModal(false)} className="text-slate-400">Cancel</button>
-                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold">Save Partner</button>
+                <button type="button" onClick={() => setShowLogisticsModal(false)} className="text-slate-400 font-bold uppercase text-[10px]">Cancel</button>
+                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-100">Commit Partner</button>
               </div>
             </form>
           </div>

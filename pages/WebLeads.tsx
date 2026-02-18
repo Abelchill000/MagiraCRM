@@ -19,7 +19,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 
   const isAdmin = userRole === UserRole.ADMIN;
   // Special access check for the specific agent email
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
+  const isPrivileged = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
 
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -31,13 +31,9 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   }, []);
 
   const sortedLeads = useMemo(() => {
-    let filteredLeads = [...leads];
-    // Agents only see leads from their pages, unless they are an Admin or the designated Super Agent
-    if (!isAdmin && !isSuperAgent && user) {
-      filteredLeads = filteredLeads.filter(l => l.agentName === user.name);
-    }
-    return filteredLeads.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [leads, isAdmin, isSuperAgent, user]);
+    // Per user request, everyone (agents and admin) should see all customer details
+    return [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [leads]);
 
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
@@ -137,14 +133,14 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Console</h1>
-            {isSuperAgent && !isAdmin && (
+            {(isAdmin || isPrivileged) && (
               <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest border border-emerald-200">
                 Network Access Enabled
               </span>
             )}
           </div>
           <p className="text-slate-500 text-sm font-medium">
-            {(isAdmin || isSuperAgent) ? "Network-wide lead capture monitoring." : `Showing your individual captured leads.`}
+            Network-wide lead capture monitoring. Every user can see all leads per request.
           </p>
         </div>
       </div>
@@ -289,7 +285,13 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                   <p className="text-lg font-black text-emerald-600">{viewingLead.whatsapp || 'Not Provided'}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Location</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Location Hub</label>
+                  <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
+                    {states.find(s => s.id === viewingLead.stateId || s.name === viewingLead.stateId)?.name || 'Not Assigned / Global'}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Address</label>
                   <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingLead.address}"</p>
                 </div>
                 <div className="md:col-span-2">
