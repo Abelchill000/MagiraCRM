@@ -15,6 +15,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   const [products] = useState(db.getProducts());
   const [states] = useState(db.getStates());
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   
   const [showLogisticsPrompt, setShowLogisticsPrompt] = useState<{orderId: string, status: DeliveryStatus} | null>(null);
   const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
@@ -39,12 +40,18 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const isAdmin = user.role === UserRole.ADMIN;
   const isAgent = user.role === UserRole.SALES_AGENT;
+  // Special access check for the specific agent email
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
   const orders = useMemo(() => {
-    const filtered = isAdmin ? dbOrders : dbOrders.filter(o => o.createdBy === user.name || o.createdBy === 'Lead Conversion');
+    // If Admin OR the specified Super Agent email, show ALL orders
+    const filtered = (isAdmin || isSuperAgent) 
+      ? dbOrders 
+      : dbOrders.filter(o => o.createdBy === user.name || o.createdBy === 'Lead Conversion');
+    
     // Sort by newest first
     return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [dbOrders, isAdmin, user.name]);
+  }, [dbOrders, isAdmin, isSuperAgent, user.name]);
 
   const handleAddItem = (productId: string) => {
     const product = products.find(p => p.id === productId);
@@ -107,12 +114,13 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const handleStatusChange = (orderId: string, status: DeliveryStatus) => {
-    if (isAgent && status !== DeliveryStatus.RESCHEDULED) {
-      alert("Sales Agents can only change order status to 'Rescheduled'. Contact an Admin for other changes.");
+    // Super Agents and Admins have full status control
+    if (!isAdmin && !isSuperAgent && status !== DeliveryStatus.RESCHEDULED) {
+      alert("Standard Sales Agents can only change order status to 'Rescheduled'. Contact an Admin for other changes.");
       return;
     }
 
-    if (status === DeliveryStatus.DELIVERED && isAdmin) {
+    if (status === DeliveryStatus.DELIVERED && (isAdmin || isSuperAgent)) {
       setShowLogisticsPrompt({ orderId, status });
       setTempLogisticsCost(0);
     } else if (status === DeliveryStatus.RESCHEDULED) {
@@ -207,7 +215,12 @@ Stay Healthy, Stay Energized!`.trim();
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Order Management</h1>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+            Order Management
+            {isSuperAgent && !isAdmin && (
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Network Admin Mode</span>
+            )}
+          </h1>
           <p className="text-slate-500 text-sm font-medium">Track shipments, payments, and customer deliveries.</p>
         </div>
         <button 
@@ -228,14 +241,13 @@ Stay Healthy, Stay Energized!`.trim();
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer Info</th>
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Pricing</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Instructions</th>
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-medium">No orders in database. Converted leads appear here automatically.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No orders in database. Converted leads appear here automatically.</td>
                 </tr>
               ) : (
                 orders.map(order => (
@@ -250,9 +262,6 @@ Stay Healthy, Stay Energized!`.trim();
                         <p className="text-[10px] text-slate-500 font-bold">📞 {order.phone}</p>
                         {order.whatsapp && <p className="text-[10px] text-emerald-600 font-black">📲 {order.whatsapp}</p>}
                       </div>
-                      {order.deliveryStatus === DeliveryStatus.RESCHEDULED && order.rescheduleDate && (
-                        <p className="text-[10px] text-amber-600 font-black mt-1 uppercase">📅 Due: {order.rescheduleDate}</p>
-                      )}
                     </td>
                     <td className="px-6 py-4">
                       <select 
@@ -261,26 +270,22 @@ Stay Healthy, Stay Energized!`.trim();
                         className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border-none focus:ring-0 cursor-pointer ${getStatusColor(order.deliveryStatus)}`}
                       >
                         {Object.values(DeliveryStatus).map(s => {
-                          if (isAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
+                          if (!isAdmin && !isSuperAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
                           return <option key={s} value={s}>{s}</option>;
                         })}
                       </select>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-black text-slate-800">₦{order.totalAmount.toLocaleString()}</p>
-                      {order.deliveryStatus === DeliveryStatus.DELIVERED && order.logisticsCost > 0 && (
-                        <p className="text-[10px] text-red-500 font-black">-{order.logisticsCost.toLocaleString()} LOGISTICS</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 max-w-[180px]">
-                      <p className="text-[10px] text-slate-400 italic line-clamp-2">
-                        {order.deliveryInstructions || 'No instructions provided'}
-                      </p>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end space-x-1">
+                        <button onClick={() => setViewingOrder(order)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="View Details">👁️</button>
                         <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Copy Receipt">📄</button>
                         <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="WhatsApp Customer">📲</button>
+                        {isAdmin && (
+                          <button onClick={() => { if(window.confirm('Delete order?')) {} }} className="p-2 text-slate-200 hover:text-red-600 rounded-lg transition-all">🗑️</button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -301,24 +306,15 @@ Stay Healthy, Stay Energized!`.trim();
           orders.map(order => (
             <div key={order.id} className={`bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col space-y-4 ${order.deliveryStatus === DeliveryStatus.CANCELLED ? 'opacity-50' : ''}`}>
               <div className="flex justify-between items-start">
-                <div>
+                <div onClick={() => setViewingOrder(order)} className="cursor-pointer">
                   <span className="text-[10px] font-mono font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">ID: {order.id}</span>
-                  <p className="mt-2 font-black text-slate-800 text-lg">{order.customerName}</p>
+                  <p className="mt-2 font-black text-slate-800 text-lg flex items-center gap-2">{order.customerName} <span className="text-xs">👁️</span></p>
                   <p className="text-xs text-slate-500 font-bold">📞 {order.phone}</p>
-                  {order.whatsapp && <p className="text-xs text-emerald-600 font-black">📲 {order.whatsapp}</p>}
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-black text-slate-900">₦{order.totalAmount.toLocaleString()}</p>
-                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Grand Total</span>
                 </div>
               </div>
-
-              {order.deliveryInstructions && (
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Instruction</p>
-                  <p className="text-[11px] text-slate-600 leading-relaxed italic font-medium">"{order.deliveryInstructions}"</p>
-                </div>
-              )}
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-50">
                 <select 
@@ -327,27 +323,91 @@ Stay Healthy, Stay Energized!`.trim();
                   className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl border-none focus:ring-0 cursor-pointer w-40 ${getStatusColor(order.deliveryStatus)}`}
                 >
                   {Object.values(DeliveryStatus).map(s => {
-                    if (isAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
+                    if (!isAdmin && !isSuperAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
                     return <option key={s} value={s}>{s}</option>;
                   })}
                 </select>
 
                 <div className="flex gap-2">
-                  <button onClick={() => copyReceiptText(order)} className="p-2.5 bg-slate-50 rounded-xl text-slate-500 active:scale-95 transition">📄</button>
-                  <button onClick={() => shareWhatsApp(order)} className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 active:scale-95 transition">📲</button>
+                  <button onClick={() => copyReceiptText(order)} className="p-2.5 bg-slate-50 rounded-xl text-slate-500 transition">📄</button>
+                  <button onClick={() => shareWhatsApp(order)} className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 transition">📲</button>
                 </div>
               </div>
-
-              {order.deliveryStatus === DeliveryStatus.RESCHEDULED && order.rescheduleDate && (
-                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 animate-pulse">
-                  <p className="text-[10px] text-amber-800 font-black uppercase tracking-widest mb-1">📅 Rescheduled Due Date</p>
-                  <p className="text-xs text-amber-900 font-bold">{order.rescheduleDate}</p>
-                </div>
-              )}
             </div>
           ))
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {viewingOrder && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Order Fulfillment Profile</h2>
+              <button onClick={() => setViewingOrder(null)} className="text-slate-400 hover:text-slate-600 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">✕</button>
+            </div>
+            <div className="p-10 space-y-8 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Customer Name</label>
+                  <p className="text-lg font-black text-slate-900">{viewingOrder.customerName}</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tracking ID</label>
+                  <p className="text-xs font-mono font-black text-emerald-600 tracking-wider uppercase">{viewingOrder.trackingId}</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Contact Phone</label>
+                  <p className="text-lg font-black text-slate-900">{viewingOrder.phone}</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">WhatsApp Hub</label>
+                  <p className="text-lg font-black text-emerald-600">{viewingOrder.whatsapp || 'N/A'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Full Physical Address</label>
+                  <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingOrder.address}"</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Directives</label>
+                  <p className="text-sm font-medium text-slate-500 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">
+                    {viewingOrder.deliveryInstructions || 'No custom directives provided.'}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Package Details</label>
+                  <div className="mt-3 space-y-2">
+                    {viewingOrder.items.map((item, i) => (
+                      <div key={i} className="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                        <span className="text-xs font-black uppercase text-slate-800">{item.productName} × {item.quantity}</span>
+                        <span className="text-xs font-black text-slate-500">₦{(item.priceAtOrder * item.quantity).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pt-4 border-t border-slate-100">
+                      <span className="text-xs font-black text-slate-400 uppercase">Grand Total</span>
+                      <span className="text-xl font-black text-slate-900">₦{viewingOrder.totalAmount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-6 border-t border-slate-100 flex gap-4">
+                <button 
+                  onClick={() => { copyReceiptText(viewingOrder); }}
+                  className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl"
+                >
+                  Copy Receipt
+                </button>
+                <button 
+                  onClick={() => { shareWhatsApp(viewingOrder); }}
+                  className="flex-1 bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-black transition shadow-xl"
+                >
+                  WhatsApp
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reschedule Modal */}
       {showRescheduleModal && (
