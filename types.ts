@@ -106,6 +106,7 @@ export interface OrderForm {
   submitButtonText: string;
   successMessage: string;
   thankYouUrl?: string;
+  createdBy: string; // User name or ID
 }
 
 export interface WebLead {
@@ -121,6 +122,7 @@ export interface WebLead {
   status: LeadStatus;
   notes: string;
   createdAt: string;
+  agentName?: string; // Who the lead belongs to
 }
 
 export interface User {

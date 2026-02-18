@@ -18,17 +18,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { 
       id: 'products', 
-      label: userRole === UserRole.ADMIN ? 'Inventory' : 'Inventory Management', 
+      label: userRole === UserRole.ADMIN ? 'Inventory' : 'Stock Levels', 
       icon: '📦', 
       roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] 
     },
     { id: 'leads', label: 'Web Leads', icon: '⚡', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'orders', label: 'Orders', icon: '🛒', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
-    { id: 'formbuilder', label: 'Form Builder', icon: '🧱', roles: [UserRole.ADMIN] },
+    { id: 'formbuilder', label: 'Page Builder', icon: '🧱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'logistics', label: 'Logistics', icon: '🚚', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] },
     { 
       id: 'users', 
-      label: 'User Approvals', 
+      label: 'Team Access', 
       icon: '👤', 
       roles: [UserRole.ADMIN],
       badge: pendingCount > 0 ? pendingCount : null 
@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
               {item.icon}
             </span>
             {isOpen && (
-              <span className="font-medium whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300 flex-1">
+              <span className="font-medium whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300 flex-1 text-sm">
                 {item.label}
               </span>
             )}
