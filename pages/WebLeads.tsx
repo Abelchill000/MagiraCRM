@@ -18,8 +18,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   });
 
   const isAdmin = userRole === UserRole.ADMIN;
-  // Special access check for the specific agent email
-  const isPrivileged = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
+  // ONLY this specific agent gets Admin-level global visibility
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -31,9 +31,15 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   }, []);
 
   const sortedLeads = useMemo(() => {
-    // Per user request, everyone (agents and admin) should see all customer details
-    return [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [leads]);
+    // Admin and Super Agent see everything
+    if (isAdmin || isSuperAgent) {
+      return [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    // Regular agents see only leads attributed to them
+    return leads
+      .filter(l => l.agentName === user?.name)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [leads, isAdmin, isSuperAgent, user?.name]);
 
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
@@ -133,14 +139,14 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Console</h1>
-            {(isAdmin || isPrivileged) && (
+            {(isAdmin || isSuperAgent) && (
               <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest border border-emerald-200">
                 Network Access Enabled
               </span>
             )}
           </div>
           <p className="text-slate-500 text-sm font-medium">
-            Network-wide lead capture monitoring. Every user can see all leads per request.
+            {isAdmin || isSuperAgent ? 'Network-wide lead capture monitoring.' : 'Tracking leads attributed to your sales profile.'}
           </p>
         </div>
       </div>
@@ -242,7 +248,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                           {lead.status === LeadStatus.NEW && (
                             <button onClick={() => { setSelectedLead(lead); setShowConvertModal(true); }} className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg shadow-emerald-100">Convert</button>
                           )}
-                          {isAdmin && (
+                          {(isAdmin || isSuperAgent) && (
                             <button onClick={() => handleDeleteLead(lead.id)} className="p-3 bg-slate-50 text-slate-300 hover:text-red-600 rounded-xl transition">🗑️</button>
                           )}
                         </div>

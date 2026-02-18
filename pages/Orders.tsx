@@ -39,13 +39,19 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   }, []);
 
   const isAdmin = user.role === UserRole.ADMIN;
-  // Special access check for the specific emails
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
+  // ONLY this specific agent gets Admin-level global visibility
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
   const orders = useMemo(() => {
-    // Per user request, Agents and Admin can view ALL orders
-    return [...dbOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [dbOrders]);
+    // Admin and Super Agent see everything
+    if (isAdmin || isSuperAgent) {
+      return [...dbOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    // Standard agents only see orders they created (or were converted from their leads)
+    return dbOrders
+      .filter(o => o.createdBy === user?.name)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [dbOrders, isAdmin, isSuperAgent, user?.name]);
 
   const handleAddItem = (productId: string) => {
     const product = products.find(p => p.id === productId);
@@ -211,11 +217,13 @@ Stay Healthy, Stay Energized!`.trim();
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             Order Management
-            {isSuperAgent && !isAdmin && (
+            {(isSuperAgent && !isAdmin) && (
               <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Network Admin Mode</span>
             )}
           </h1>
-          <p className="text-slate-500 text-sm font-medium">Global order tracking. Every user sees all orders as requested.</p>
+          <p className="text-slate-500 text-sm font-medium">
+            {isAdmin || isSuperAgent ? 'Global order tracking console.' : 'Tracking orders processed by your sales account.'}
+          </p>
         </div>
         <button 
           onClick={() => setShowCreateModal(true)}
@@ -277,7 +285,7 @@ Stay Healthy, Stay Energized!`.trim();
                         <button onClick={() => setViewingOrder(order)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="View Details">👁️</button>
                         <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Copy Receipt">📄</button>
                         <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="WhatsApp Customer">📲</button>
-                        {isAdmin && (
+                        {(isAdmin || isSuperAgent) && (
                           <button onClick={() => { if(window.confirm('Delete order?')) {} }} className="p-2 text-slate-200 hover:text-red-600 rounded-lg transition-all">🗑️</button>
                         )}
                       </div>
