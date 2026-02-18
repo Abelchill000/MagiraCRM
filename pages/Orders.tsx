@@ -151,26 +151,43 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const copyReceiptText = (order: Order) => {
-    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} @ ₦${i.priceAtOrder.toLocaleString()}`).join('\n');
-    const text = `📜 MAGIRA RECEIPT
-Order ID: ${order.id}
-Customer: ${order.customerName}
+    const itemsText = order.items.map(i => `• ${i.productName} x${i.quantity} @ ₦${i.priceAtOrder.toLocaleString()}`).join('\n');
+    const stateName = states.find(s => s.id === order.stateId)?.name || 'General Network';
+    const orderDate = new Date(order.createdAt).toLocaleDateString('en-NG', { dateStyle: 'long' });
+
+    const text = `🌿 MAGIRA OFFICIAL RECEIPT
+----------------------------
+📅 Date: ${orderDate}
+🆔 Order ID: ${order.id}
+👤 Processed By: ${order.createdBy}
+----------------------------
+📝 CUSTOMER DETAILS
+Name: ${order.customerName}
 Phone: ${order.phone}
-${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Address: ${order.address}
----
-Items:
+${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Region: ${stateName}
+Address: ${order.address}
+----------------------------
+📦 ORDER ITEMS
 ${itemsText}
----
-${order.deliveryInstructions ? `Special Instructions: ${order.deliveryInstructions}\n---\n` : ''}Total: ₦${order.totalAmount.toLocaleString()}
-Payment: ${order.paymentStatus}
-Tracking: ${order.trackingId}`.trim();
+----------------------------
+💰 FINANCIAL SUMMARY
+Total Amount: ₦${order.totalAmount.toLocaleString()}
+Payment Mode: ${order.paymentStatus}
+Status: ${order.deliveryStatus}
+----------------------------
+📍 TRACKING & NOTES
+Tracking ID: ${order.trackingId}
+${order.deliveryInstructions ? `Instructions: ${order.deliveryInstructions}\n` : ''}
+Thank you for choosing Magira. 
+Stay Healthy, Stay Energized!`.trim();
+
     navigator.clipboard.writeText(text);
-    alert('Receipt copied to clipboard!');
+    alert('Professional receipt copied to clipboard!');
   };
 
   const shareWhatsApp = (order: Order) => {
     const targetPhone = order.whatsapp || order.phone;
-    const text = `Hello ${order.customerName}, your Magira order ${order.id} is ${order.deliveryStatus}. Tracking: ${order.trackingId}. Total: ₦${order.totalAmount}`;
+    const text = `Hello ${order.customerName}, your Magira order ${order.id} is currently ${order.deliveryStatus}. \n\nTracking ID: ${order.trackingId}\nTotal: ₦${order.totalAmount.toLocaleString()}\n\nThank you for choosing Magira!`;
     const url = `https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
