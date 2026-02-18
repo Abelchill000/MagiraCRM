@@ -4,6 +4,7 @@ import { db } from '../services/mockDb.ts';
 import { Product, UserRole, State } from '../types.ts';
 
 const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
+  const user = db.getCurrentUser();
   const [products, setProducts] = useState<Product[]>(db.getProducts());
   const [states] = useState<State[]>(db.getStates());
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,7 +24,9 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     stateId: null
   });
 
-  const isAdmin = userRole === UserRole.ADMIN;
+  // Access check for specific email
+  const isInventoryManager = user?.email === 'iconfidence909@gmail.com';
+  const isAdmin = userRole === UserRole.ADMIN || isInventoryManager;
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {

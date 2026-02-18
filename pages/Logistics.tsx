@@ -4,22 +4,29 @@ import { db } from '../services/mockDb';
 import { LogisticsPartner, State, UserRole } from '../types';
 
 const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
+  const user = db.getCurrentUser();
   const [partners, setPartners] = useState<LogisticsPartner[]>(db.getLogistics());
   const [states, setStates] = useState<State[]>(db.getStates());
   const [showStateModal, setShowStateModal] = useState(false);
   const [showLogisticsModal, setShowLogisticsModal] = useState(false);
+  const [editingState, setEditingState] = useState<State | null>(null);
+
+  // Access check for specific email
+  const isLogisticsManager = user?.email === 'iconfidence909@gmail.com';
+  const isAuthorized = userRole === UserRole.ADMIN || isLogisticsManager;
 
   const handleAddState = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const newState: State = {
-      id: 's' + Math.random().toString(36).substr(2, 5),
+      id: editingState?.id || 's' + Math.random().toString(36).substr(2, 5),
       name: formData.get('name') as string,
       whatsappGroupLink: formData.get('whatsapp') as string
     };
     db.saveState(newState);
     setStates(db.getStates());
     setShowStateModal(false);
+    setEditingState(null);
   };
 
   const handleAddLogistics = (e: React.FormEvent) => {
@@ -45,14 +52,16 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           <p className="text-slate-500">Manage state hubs and delivery partners.</p>
         </div>
         <div className="space-x-2">
-          {userRole === UserRole.ADMIN && (
-            <button onClick={() => setShowStateModal(true)} className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium hover:bg-slate-50">
+          {isAuthorized && (
+            <button onClick={() => { setEditingState(null); setShowStateModal(true); }} className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium hover:bg-slate-50">
               Add State
             </button>
           )}
-          <button onClick={() => setShowLogisticsModal(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700">
-            Add Partner
-          </button>
+          {isAuthorized && (
+            <button onClick={() => setShowLogisticsModal(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700">
+              Add Partner
+            </button>
+          )}
         </div>
       </div>
 
@@ -62,8 +71,8 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           <h3 className="text-lg font-bold text-slate-800 mb-4">Active States</h3>
           <div className="space-y-3">
             {states.map(state => (
-              <div key={state.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
-                <div>
+              <div key={state.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between group">
+                <div className="min-w-0 flex-1">
                   <p className="font-bold text-slate-800">{state.name}</p>
                   <p className="text-xs text-slate-500 truncate max-w-[200px]">{state.whatsappGroupLink}</p>
                 </div>
@@ -71,6 +80,14 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                   <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
                     {partners.filter(p => p.stateId === state.id).length} Partners
                   </span>
+                  {isAuthorized && (
+                    <button 
+                      onClick={() => { setEditingState(state); setShowStateModal(true); }}
+                      className="p-1.5 text-slate-400 hover:text-emerald-600 transition opacity-0 group-hover:opacity-100"
+                    >
+                      ✏️
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -99,17 +116,23 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
         </div>
       </div>
 
-      {/* Modals (Simplified) */}
+      {/* Modals */}
       {showStateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-8">
-            <h2 className="text-xl font-bold text-slate-800 mb-6">Add New State</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-6">{editingState ? 'Edit State Hub' : 'Add New State'}</h2>
             <form onSubmit={handleAddState} className="space-y-4">
-              <input name="name" required placeholder="State Name (e.g. Enugu)" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
-              <input name="whatsapp" required placeholder="WhatsApp Group Link" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">State Name</label>
+                <input name="name" required defaultValue={editingState?.name || ''} placeholder="e.g. Enugu" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">WhatsApp Group Link</label>
+                <input name="whatsapp" required defaultValue={editingState?.whatsappGroupLink || ''} placeholder="https://chat.whatsapp.com/..." className="w-full border border-slate-200 rounded-lg px-4 py-2" />
+              </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button type="button" onClick={() => setShowStateModal(false)} className="text-slate-400">Cancel</button>
-                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg">Save State</button>
+                <button type="button" onClick={() => { setShowStateModal(false); setEditingState(null); }} className="text-slate-400">Cancel</button>
+                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold">Save Changes</button>
               </div>
             </form>
           </div>
@@ -130,7 +153,7 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               <input name="phone" required placeholder="Phone Number" className="w-full border border-slate-200 rounded-lg px-4 py-2" />
               <div className="flex justify-end space-x-3 mt-6">
                 <button type="button" onClick={() => setShowLogisticsModal(false)} className="text-slate-400">Cancel</button>
-                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg">Save Partner</button>
+                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold">Save Partner</button>
               </div>
             </form>
           </div>

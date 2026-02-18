@@ -41,10 +41,10 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   const isAdmin = user.role === UserRole.ADMIN;
   const isAgent = user.role === UserRole.SALES_AGENT;
   // Special access check for the specific agent email
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
 
   const orders = useMemo(() => {
-    // If Admin OR the specified Super Agent email, show ALL orders
+    // If Admin OR the specified Super Agent emails, show ALL orders
     const filtered = (isAdmin || isSuperAgent) 
       ? dbOrders 
       : dbOrders.filter(o => o.createdBy === user.name || o.createdBy === 'Lead Conversion');
@@ -363,6 +363,12 @@ Stay Healthy, Stay Energized!`.trim();
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">WhatsApp Hub</label>
                   <p className="text-lg font-black text-emerald-600">{viewingOrder.whatsapp || 'N/A'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Region</label>
+                  <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
+                    {states.find(s => s.id === viewingOrder.stateId)?.name || 'General Network'}
+                  </p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Full Physical Address</label>

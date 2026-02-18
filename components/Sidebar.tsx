@@ -12,16 +12,21 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, userRole }) => {
+  const user = db.getCurrentUser();
   const pendingCount = db.getPendingUserCount();
   const abandonedCount = db.getAbandonedCarts().filter(c => c.status === 'abandoned').length;
+  
+  // Special access email
+  const isPrivilegedUser = user?.email === 'iconfidence909@gmail.com';
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { 
       id: 'products', 
-      label: userRole === UserRole.ADMIN ? 'Inventory' : 'Stock Levels', 
+      label: (userRole === UserRole.ADMIN || isPrivilegedUser) ? 'Inventory' : 'Stock Levels', 
       icon: '📦', 
-      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] 
+      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER],
+      specialAccess: isPrivilegedUser
     },
     { id: 'leads', label: 'Web Leads', icon: '⚡', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { 
@@ -34,7 +39,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     },
     { id: 'orders', label: 'Orders', icon: '📦', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'formbuilder', label: 'Page Builder', icon: '🧱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
-    { id: 'logistics', label: 'Logistics', icon: '🚚', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] },
+    { 
+      id: 'logistics', 
+      label: 'Logistics', 
+      icon: '🚚', 
+      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER],
+      specialAccess: isPrivilegedUser
+    },
     { 
       id: 'users', 
       label: 'Team Access', 
@@ -48,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
   ];
 
-  const filteredItems = menuItems.filter(item => item.roles.includes(userRole));
+  const filteredItems = menuItems.filter(item => item.roles.includes(userRole) || item.specialAccess);
 
   return (
     <aside 
