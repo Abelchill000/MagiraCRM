@@ -13,6 +13,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setIsOpen, userRole }) => {
   const pendingCount = db.getPendingUserCount();
+  const abandonedCount = db.getAbandonedCarts().filter(c => c.status === 'abandoned').length;
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
@@ -23,7 +24,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
       roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] 
     },
     { id: 'leads', label: 'Web Leads', icon: '⚡', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
-    { id: 'orders', label: 'Orders', icon: '🛒', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
+    { 
+      id: 'abandoned', 
+      label: 'Lost Carts', 
+      icon: '🛒', 
+      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT],
+      badge: abandonedCount > 0 ? abandonedCount : null,
+      badgeColor: 'bg-amber-500'
+    },
+    { id: 'orders', label: 'Orders', icon: '📦', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'formbuilder', label: 'Page Builder', icon: '🧱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { id: 'logistics', label: 'Logistics', icon: '🚚', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER] },
     { 
@@ -31,7 +40,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
       label: 'Team Access', 
       icon: '👤', 
       roles: [UserRole.ADMIN],
-      badge: pendingCount > 0 ? pendingCount : null 
+      badge: pendingCount > 0 ? pendingCount : null,
+      badgeColor: 'bg-red-500'
     },
     { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN] },
     { id: 'whatsapp', label: 'WhatsApp Hub', icon: '📱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
@@ -85,7 +95,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
 
             {item.badge && (
                <span className={`
-                 flex items-center justify-center bg-red-500 text-white font-black rounded-full animate-bounce
+                 flex items-center justify-center text-white font-black rounded-full animate-bounce
+                 ${item.badgeColor || 'bg-red-500'}
                  ${isOpen ? 'text-[9px] w-5 h-5 ml-auto' : 'absolute top-1 right-1 w-4 h-4 text-[7px]'}
                `}>
                  {item.badge}

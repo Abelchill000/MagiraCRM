@@ -125,6 +125,22 @@ export interface WebLead {
   agentName?: string; // Who the lead belongs to
 }
 
+export interface AbandonedCart {
+  id: string; // Session ID
+  formId: string;
+  customerName?: string;
+  phone?: string;
+  whatsapp?: string;
+  address?: string;
+  deliveryInstructions?: string;
+  items?: Array<{ productId: string; quantity: number }>;
+  createdAt: string;
+  lastUpdatedAt: string;
+  agentName: string;
+  status: 'abandoned' | 'converted';
+  pageUrl?: string;
+}
+
 export interface User {
   id: string;
   name: string;

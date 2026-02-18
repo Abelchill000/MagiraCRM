@@ -140,8 +140,232 @@ const FormBuilder: React.FC = () => {
   };
 
   const getEmbedCode = (form: OrderForm) => {
-    // This is for the production script... simplified for brevity here, logic matches preview
-    return `<!-- Magira Embed Script for ${form.createdBy} -->...`;
+    const packageOptions = PACKAGES.map(pkg => 
+      `<option value='{"qty":${pkg.qty}, "price":${pkg.price}}'>${pkg.label}</option>`
+    ).join('\n            ');
+
+    const stateOptions = NIGERIA_STATES.map(s => `<option value="${s}">${s}</option>`).join('\n            ');
+
+    const sectionsHtml = form.sections.map(sec => {
+      switch (sec.type) {
+        case 'HEADER':
+          return `<div style="background-color: ${form.themeColor}; padding: 32px 24px; color: white; text-align: center;"><h2 style="margin: 0; font-size: 24px; font-weight: 900;">${sec.label || form.title}</h2><p style="margin: 12px 0 0 0; font-size: 15px; opacity: 0.9; line-height: 1.5;">${sec.content || form.description}</p></div>`;
+        case 'IMAGE':
+          return `<div style="width: 100%;"><img src="${sec.content}" style="width: 100%; display: block; height: auto;" alt="Magira Image"></div>`;
+        case 'CONTACT':
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="phone" placeholder="Phone Number (Call)" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="whatsapp" placeholder="WhatsApp Number" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-size: 14px;"></div>`;
+        case 'PRODUCTS':
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="packageData" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px; font-weight: 600;"><option value="">-- Choose Ginger Shot Package --</option>${packageOptions}</select></div>`;
+        case 'LOCATION':
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="stateName" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px;"><option value="">-- Select State --</option>${stateOptions}</select></div>`;
+        case 'ADDRESS':
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="Full Delivery Address" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
+        case 'DELIVERY_INSTRUCTIONS':
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="deliveryInstructions" rows="2" placeholder="${sec.content || 'Add specific instructions for the delivery agent...'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
+        case 'BENEFITS':
+          const benefits = (sec.content || '').split('\n').map(b => `<li style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #475569;"><span style="color: ${form.themeColor}; font-weight: bold;">✓</span> <span>${b.trim()}</span></li>`).join('');
+          return `<div style="padding: 24px; background: #f8fafc; border-radius: 16px; margin: 0 24px;"><h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 800; color: #1e293b;">${sec.label}</h3><ul style="list-style: none; padding: 0; margin: 0;">${benefits}</ul></div>`;
+        case 'TESTIMONIALS':
+          return `<div style="padding: 24px; border-radius: 16px; border: 2px solid #f1f5f9; margin: 0 24px; background: white;"><p style="margin: 0; font-style: italic; color: #475569; line-height: 1.6; font-size: 15px;">${sec.content}</p><p style="margin: 12px 0 0 0; font-weight: 800; font-size: 13px; color: #1e293b;">— ${sec.label}</p></div>`;
+        case 'FAQ':
+          return `<div style="padding: 0 24px;"><h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 800; color: #1e293b;">Q: ${sec.label}</h3><p style="margin: 0; font-size: 14px; color: #64748b; line-height: 1.6;">A: ${sec.content}</p></div>`;
+        case 'CUSTOM_TEXT':
+          return `<div style="padding: 0 24px;"><h4 style="margin: 0; font-size: 14px; font-weight: 800; color: #334155;">${sec.label}</h4><p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b; line-height: 1.6;">${sec.content}</p></div>`;
+        default: return '';
+      }
+    }).join('\n');
+
+    return `<!-- Magira Lead Recovery Logic: Generated for ${form.createdBy} -->
+<div id="magira-container-${form.id}" style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 20px auto; border: 1px solid #f1f5f9; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08); background: white;">
+  <form id="magira-form-${form.id}" style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 32px;">
+    ${sectionsHtml}
+    
+    <div style="padding: 8px 24px 0 24px;">
+      <button type="submit" style="width: 100%; background-color: ${form.themeColor}; color: white; border: none; padding: 18px; border-radius: 16px; font-weight: 900; font-size: 16px; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 15px -3px ${form.themeColor}33;">
+        ${form.submitButtonText}
+      </button>
+      <p style="text-align: center; margin: 16px 0 0 0; font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Secure Fulfillment via Magira CRM</p>
+    </div>
+  </form>
+</div>
+
+<script>
+(function() {
+  const formId = "${form.id}";
+  const agentName = "${form.createdBy}";
+  const apiKey = "AIzaSyDjIST5wP--TJhSxmbDqvgTSHUUFeMJVwE";
+  const projectId = "magiracrm";
+  const sessionId = 'SESS-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+  
+  let debounceTimer;
+  const formEl = document.getElementById('magira-form-' + formId);
+
+  // Real-time Field Capture for Abandoned Carts
+  formEl.addEventListener('input', function(e) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const formData = new FormData(formEl);
+      const rawData = Object.fromEntries(formData.entries());
+      
+      let pkg = { qty: 1 };
+      try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
+
+      const payload = {
+        id: sessionId,
+        formId: formId,
+        customerName: rawData.customerName || '',
+        phone: rawData.phone || '',
+        whatsapp: rawData.whatsapp || '',
+        address: rawData.address || '',
+        deliveryInstructions: rawData.deliveryInstructions || '',
+        agentName: agentName,
+        status: 'abandoned',
+        lastUpdatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), // Only set on first write
+        pageUrl: window.location.href,
+        items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }]
+      };
+
+      // Push partial data to Firestore abandoned_carts
+      fetch(\`https://firestore.googleapis.com/v1/projects/\${projectId}/databases/(default)/documents/abandoned_carts/\${sessionId}?key=\${apiKey}\`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            id: { stringValue: payload.id },
+            formId: { stringValue: payload.formId },
+            customerName: { stringValue: payload.customerName },
+            phone: { stringValue: payload.phone },
+            whatsapp: { stringValue: payload.whatsapp },
+            address: { stringValue: payload.address },
+            deliveryInstructions: { stringValue: payload.deliveryInstructions },
+            agentName: { stringValue: payload.agentName },
+            status: { stringValue: payload.status },
+            lastUpdatedAt: { stringValue: payload.lastUpdatedAt },
+            createdAt: { stringValue: payload.createdAt },
+            pageUrl: { stringValue: payload.pageUrl },
+            items: {
+              arrayValue: {
+                values: payload.items.map(i => ({
+                  mapValue: { fields: { productId: { stringValue: i.productId }, quantity: { integerValue: i.quantity } } }
+                }))
+              }
+            }
+          }
+        })
+      }).catch(err => console.debug('Recovery update failed'));
+    }, 1500);
+  });
+
+  // Successful Lead Submission
+  formEl.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button');
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerText = 'Transmitting Order...';
+    
+    const formData = new FormData(this);
+    const rawData = Object.fromEntries(formData.entries());
+    
+    let pkg = { qty: 1, price: 0 };
+    try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
+
+    const leadId = 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const payload = {
+      id: leadId,
+      formId: formId,
+      customerName: rawData.customerName,
+      phone: rawData.phone,
+      whatsapp: rawData.whatsapp || '',
+      address: rawData.address,
+      deliveryInstructions: rawData.deliveryInstructions || '',
+      status: 'New Lead',
+      notes: 'Captured via Landing Page by ' + agentName,
+      createdAt: new Date().toISOString(),
+      agentName: agentName,
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }]
+    };
+
+    try {
+      // 1. Send the full lead
+      const response = await fetch(\`https://firestore.googleapis.com/v1/projects/\${projectId}/databases/(default)/documents/leads?documentId=\${leadId}&key=\${apiKey}\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            id: { stringValue: payload.id },
+            formId: { stringValue: payload.formId },
+            customerName: { stringValue: payload.customerName },
+            phone: { stringValue: payload.phone },
+            whatsapp: { stringValue: payload.whatsapp },
+            address: { stringValue: payload.address },
+            deliveryInstructions: { stringValue: payload.deliveryInstructions },
+            status: { stringValue: payload.status },
+            notes: { stringValue: payload.notes },
+            createdAt: { stringValue: payload.createdAt },
+            agentName: { stringValue: payload.agentName },
+            items: {
+              arrayValue: {
+                values: payload.items.map(i => ({
+                  mapValue: {
+                    fields: {
+                      productId: { stringValue: i.productId },
+                      quantity: { integerValue: i.quantity }
+                    }
+                  }
+                }))
+              }
+            }
+          }
+        })
+      });
+
+      if (!response.ok) throw new Error('Transmission Failed');
+
+      // 2. Mark abandoned cart as converted
+      fetch(\`https://firestore.googleapis.com/v1/projects/\${projectId}/databases/(default)/documents/abandoned_carts/\${sessionId}?updateMask.fieldPaths=status&key=\${apiKey}\`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { status: { stringValue: 'converted' } } })
+      });
+
+      const thankYouUrl = "${form.thankYouUrl || ''}";
+      if (thankYouUrl) {
+        window.location.href = thankYouUrl;
+      } else {
+        document.getElementById('magira-container-' + formId).innerHTML = \`
+          <div style="padding: 80px 40px; text-align: center; color: #1e293b;">
+            <div style="font-size: 72px; margin-bottom: 24px;">✅</div>
+            <h3 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 900;">Order Captured!</h3>
+            <p style="color: #64748b; font-size: 15px; line-height: 1.7;">\${agentName} has received your order and will contact you shortly.</p>
+          </div>
+        \`;
+      }
+    } catch (error) {
+      console.error('Magira Error:', error);
+      alert('Connection error. Please try again.');
+      btn.disabled = false;
+      btn.innerText = originalText;
+    }
+  });
+})();
+</script>`;
+  };
+
+  const openPreview = (form: OrderForm) => {
+    setPreviewForm(form);
+    setPreviewSubmitted(false);
+    setPreviewData({
+      customerName: '',
+      phone: '',
+      whatsapp: '',
+      package: '',
+      state: '',
+      address: '',
+      deliveryInstructions: ''
+    });
   };
 
   return (
@@ -215,42 +439,40 @@ const FormBuilder: React.FC = () => {
         ))}
       </div>
 
-      {/* Code Viewer Modal */}
       {showCodeModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[70]">
           <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden">
             <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Embed Logic for {showCodeModal.createdBy}</h2>
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Lead Recovery Script</h2>
               <button onClick={() => setShowCodeModal(null)} className="text-slate-400 hover:text-slate-600 bg-white w-8 h-8 rounded-full flex items-center justify-center shadow-sm">✕</button>
             </div>
             <div className="p-10 space-y-6">
-              <div className="bg-emerald-50 p-6 rounded-[1.5rem] border border-emerald-100">
-                 <p className="text-[11px] text-emerald-800 font-black uppercase tracking-widest mb-2">How to use</p>
-                 <p className="text-xs text-emerald-900 font-medium leading-relaxed">Paste this code into an HTML block on your WordPress, Shopify, or custom site. Leads will appear in your "Web Leads" dashboard instantly.</p>
+              <div className="bg-amber-50 p-6 rounded-[1.5rem] border border-amber-100">
+                 <p className="text-[11px] text-amber-800 font-black uppercase tracking-widest mb-2">Live Field Capture Enabled</p>
+                 <p className="text-xs text-amber-900 font-medium leading-relaxed">This script now tracks every input in real-time. If a user leaves without clicking submit, their name and phone will appear in your "Lost Carts" dashboard for recovery calls.</p>
               </div>
               <pre className="bg-slate-900 text-emerald-400 p-8 rounded-[2rem] text-[10px] overflow-x-auto max-h-[300px] leading-relaxed font-mono relative group border-4 border-slate-800">
-                {`<!-- Magira Embed Logic -->\n<div id="magira-container"></div>\n<script src="https://magiracrm.store/embed/${showCodeModal.id}.js"></script>`}
+                {getEmbedCode(showCodeModal)}
               </pre>
               <button 
                 onClick={() => {
-                   navigator.clipboard.writeText(`https://magiracrm.store/forms/${showCodeModal.id}`);
-                   alert('Form link copied!');
+                   navigator.clipboard.writeText(getEmbedCode(showCodeModal));
+                   alert('Embed Script with recovery logic copied!');
                 }}
                 className="w-full bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl shadow-emerald-100"
               >
-                Copy Link to Page
+                Copy Recovery Script
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Editor Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[2.5rem] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
             <div className="w-full md:w-80 bg-slate-50 border-r border-slate-100 p-8 overflow-y-auto">
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Page Components</h2>
+              <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Design Toolbox</h2>
               <div className="space-y-6">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Essentials</p>
@@ -263,19 +485,8 @@ const FormBuilder: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Conversion Booster</p>
-                  <div className="grid grid-cols-1 gap-2">
-                    {(['BENEFITS', 'TESTIMONIALS', 'FAQ'] as SectionType[]).map(type => (
-                      <button key={type} onClick={() => addSection(type)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-left hover:border-amber-500 transition-all flex items-center gap-3 group">
-                        <span className="bg-slate-50 text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
-                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{type.replace('_', ' ')}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <div className="pt-6 border-t border-slate-200">
-                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Theme Tint</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Brand Color</label>
                     <input type="color" className="w-full h-10 border-none rounded-xl cursor-pointer" value={editingForm?.themeColor} onChange={e => setEditingForm({...editingForm, themeColor: e.target.value})} />
                 </div>
               </div>
@@ -284,7 +495,7 @@ const FormBuilder: React.FC = () => {
             <div className="flex-1 flex flex-col bg-slate-100/30 p-8 overflow-y-auto">
                <div className="max-w-2xl mx-auto w-full space-y-6">
                   <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Campaign Name</label>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Campaign Identity</label>
                      <input 
                         className="w-full text-2xl font-black border-none p-0 focus:ring-0 placeholder-slate-200 uppercase"
                         placeholder="Page Name..."
@@ -314,27 +525,18 @@ const FormBuilder: React.FC = () => {
                               <button onClick={() => removeSection(section.id)} className="p-1.5 hover:bg-red-50 rounded text-red-400 ml-2">✕</button>
                            </div>
                         </div>
-                        {['HEADER', 'BENEFITS', 'TESTIMONIALS', 'IMAGE', 'FAQ', 'CUSTOM_TEXT'].includes(section.type) && (
-                          <textarea className="w-full text-sm bg-slate-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 font-medium" rows={3} value={section.content || ''} onChange={e => {
+                        {['HEADER', 'BENEFITS', 'TESTIMONIALS', 'IMAGE'].includes(section.type) && (
+                          <textarea className="w-full text-sm bg-slate-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 font-medium" rows={2} value={section.content || ''} onChange={e => {
                             const updated = [...(editingForm?.sections || [])];
                             updated[idx].content = e.target.value;
                             setEditingForm({...editingForm, sections: updated});
                           }}/>
                         )}
-                        {['PRODUCTS', 'CONTACT', 'LOCATION', 'ADDRESS'].includes(section.type) && (
-                          <div className="py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Auto-Generated Input Component</span>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between items-center pt-12 pb-20">
-                    <button onClick={() => { setPreviewForm(editingForm as OrderForm); setPreviewSubmitted(false); }} className="bg-slate-900 text-white px-8 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-[11px] shadow-xl shadow-slate-200">Interactive Preview</button>
-                    <div className="flex gap-3">
-                        <button onClick={() => setShowModal(false)} className="text-slate-400 font-black text-[11px] uppercase tracking-widest px-4">Discard</button>
-                        <button onClick={() => handleSave()} className="bg-emerald-600 text-white px-10 py-5 rounded-[1.5rem] font-black shadow-xl shadow-emerald-100 uppercase tracking-widest text-[11px]">Publish Changes</button>
-                    </div>
+                  <div className="flex justify-end pt-12 pb-20">
+                     <button onClick={() => handleSave()} className="bg-emerald-600 text-white px-10 py-5 rounded-[1.5rem] font-black shadow-xl shadow-emerald-100 uppercase tracking-widest text-[11px]">Deploy Page</button>
                   </div>
                </div>
             </div>
@@ -342,165 +544,60 @@ const FormBuilder: React.FC = () => {
         </div>
       )}
 
-      {/* NEW HIGH-FIDELITY PREVIEW OVERLAY */}
       {previewForm && (
         <div className="fixed inset-0 bg-slate-900/98 backdrop-blur-2xl flex flex-col z-[100] animate-in fade-in duration-300">
            <div className="h-20 bg-black/50 border-b border-white/5 flex items-center justify-between px-10 shrink-0">
-              <button onClick={() => setPreviewForm(null)} className="text-white/60 hover:text-white transition font-black text-[10px] uppercase tracking-[0.3em] flex items-center gap-2">
-                <span className="text-lg">←</span> Return to Page Builder
-              </button>
-              
+              <button onClick={() => setPreviewForm(null)} className="text-white/60 hover:text-white transition font-black text-[10px] uppercase tracking-[0.3em]">← Exit Preview</button>
               <div className="flex items-center bg-white/5 p-1 rounded-2xl">
                  <button onClick={() => setPreviewDevice('desktop')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${previewDevice === 'desktop' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/40'}`}>Desktop</button>
                  <button onClick={() => setPreviewDevice('mobile')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${previewDevice === 'mobile' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/40'}`}>Mobile</button>
               </div>
-
-              <div className="flex flex-col items-end">
-                <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Testing Attribution</span>
-                <span className="text-[10px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full uppercase tracking-widest">Agent: {previewForm.createdBy}</span>
-              </div>
+              <div className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Interactive Testing Enabled</div>
            </div>
 
            <div className="flex-1 overflow-hidden p-8 flex items-center justify-center">
-              <div className={`transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-white shadow-[0_100px_150px_-30px_rgba(0,0,0,0.5)] flex flex-col ${previewDevice === 'mobile' ? 'w-[375px] h-[760px] rounded-[3.5rem] border-[14px] border-slate-800' : 'w-full max-w-4xl h-full rounded-[2.5rem]'}`}>
+              <div className={`transition-all duration-700 bg-white shadow-2xl flex flex-col ${previewDevice === 'mobile' ? 'w-[375px] h-[760px] rounded-[3.5rem] border-[14px] border-slate-800' : 'w-full max-w-4xl h-full rounded-[2.5rem]'}`}>
                 <div className="flex-1 overflow-y-auto no-scrollbar relative bg-white">
                    {previewSubmitted ? (
-                      <div className="h-full flex flex-col items-center justify-center p-12 text-center animate-in zoom-in duration-500">
+                      <div className="h-full flex flex-col items-center justify-center p-12 text-center">
                         <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-5xl mb-8 shadow-2xl shadow-emerald-100 animate-bounce">✅</div>
                         <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight leading-tight">{previewForm.successMessage}</h2>
-                        <p className="text-slate-400 font-medium">Your submission has been captured in the Web Leads console under {previewForm.createdBy}.</p>
-                        <button 
-                          onClick={() => { setPreviewSubmitted(false); setPreviewData({}); }}
-                          className="mt-12 text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] hover:underline"
-                        >
-                          Restart Live Testing
-                        </button>
                       </div>
                    ) : (
-                    <form onSubmit={handlePreviewSubmit} className="flex flex-col gap-0">
+                    <form onSubmit={handlePreviewSubmit} className="flex flex-col gap-0 pb-20">
                       {previewForm.sections.map(sec => {
                          switch(sec.type) {
-                            case 'HEADER':
-                              return (
-                                <div key={sec.id} style={{ backgroundColor: previewForm.themeColor }} className="p-12 text-white text-center">
-                                  <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">{sec.label}</h2>
-                                  <p className="opacity-80 text-sm leading-relaxed font-medium">{sec.content}</p>
-                                </div>
-                              );
-                            case 'IMAGE':
-                              return <div key={sec.id} className="w-full"><img src={sec.content} className="w-full h-auto block" alt="Form Banner" /></div>;
-                            case 'BENEFITS':
-                              return (
-                                <div key={sec.id} className="px-10 py-12 bg-slate-50">
-                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">{sec.label}</h4>
-                                  <ul className="space-y-4">
-                                    {sec.content?.split('\n').map((b, i) => (
-                                      <li key={i} className="flex items-start gap-4 text-sm text-slate-600 font-bold leading-relaxed">
-                                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white flex items-center justify-center text-[10px]" style={{ color: previewForm.themeColor }}>✓</span>
-                                        {b}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              );
-                            case 'PRODUCTS':
-                              return (
-                                <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
-                                  <select 
-                                    required
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black text-slate-800 appearance-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm"
-                                    value={previewData.package}
-                                    onChange={e => setPreviewData({...previewData, package: e.target.value})}
-                                  >
-                                    <option value="">Select Package...</option>
-                                    {PACKAGES.map((pkg, i) => (
-                                      <option key={i} value={JSON.stringify({ qty: pkg.qty, price: pkg.price })}>{pkg.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              );
-                            case 'LOCATION':
-                              return (
-                                <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
-                                  <select 
-                                    required
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold text-slate-800 appearance-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm"
-                                    value={previewData.state}
-                                    onChange={e => setPreviewData({...previewData, state: e.target.value})}
-                                  >
-                                    <option value="">Delivery Hub...</option>
-                                    {NIGERIA_STATES.map((s, i) => <option key={i} value={s}>{s}</option>)}
-                                  </select>
-                                </div>
-                              );
-                            case 'CONTACT':
-                              return (
-                                <div key={sec.id} className="px-10 py-8 space-y-4 border-b border-slate-50">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{sec.label}</label>
-                                  <input 
-                                    required placeholder="Full Name" 
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition-all shadow-sm"
-                                    value={previewData.customerName}
-                                    onChange={e => setPreviewData({...previewData, customerName: e.target.value})}
-                                  />
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <input 
-                                      required placeholder="Phone" 
-                                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition-all shadow-sm"
-                                      value={previewData.phone}
-                                      onChange={e => setPreviewData({...previewData, phone: e.target.value})}
-                                    />
-                                    <input 
-                                      placeholder="WhatsApp" 
-                                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition-all shadow-sm"
-                                      value={previewData.whatsapp}
-                                      onChange={e => setPreviewData({...previewData, whatsapp: e.target.value})}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            case 'ADDRESS':
-                              return (
-                                <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
-                                  <textarea 
-                                    required placeholder="Delivery Address..." 
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" 
-                                    rows={3} 
-                                    value={previewData.address}
-                                    onChange={e => setPreviewData({...previewData, address: e.target.value})}
-                                  />
-                                </div>
-                              );
-                            case 'TESTIMONIALS':
-                              return (
-                                <div key={sec.id} className="px-10 py-12">
-                                  <div className="p-10 rounded-[2.5rem] bg-slate-50 border-2 border-white shadow-xl shadow-slate-200/50">
-                                    <p className="italic text-slate-600 font-medium leading-relaxed text-lg mb-6">"{sec.content}"</p>
-                                    <div className="flex items-center gap-4">
-                                      <div className="w-10 h-10 rounded-full bg-slate-200"></div>
-                                      <p className="font-black text-xs text-slate-800 uppercase tracking-[0.2em]">— {sec.label}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
+                            case 'HEADER': return <div key={sec.id} style={{ backgroundColor: previewForm.themeColor }} className="p-12 text-white text-center"><h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">{sec.label}</h2><p className="opacity-80 text-sm font-medium">{sec.content}</p></div>;
+                            case 'IMAGE': return <div key={sec.id} className="w-full"><img src={sec.content} className="w-full h-auto" /></div>;
+                            case 'CONTACT': return (
+                              <div key={sec.id} className="px-10 py-8 space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{sec.label}</label>
+                                <input required placeholder="Name" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.customerName} onChange={e => setPreviewData({...previewData, customerName: e.target.value})} />
+                                <input required placeholder="Phone" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.phone} onChange={e => setPreviewData({...previewData, phone: e.target.value})} />
+                              </div>
+                            );
+                            case 'PRODUCTS': return (
+                              <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
+                                <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.package} onChange={e => setPreviewData({...previewData, package: e.target.value})}>
+                                  <option value="">Choose Package...</option>
+                                  {PACKAGES.map((pkg, i) => <option key={i} value={JSON.stringify({ qty: pkg.qty, price: pkg.price })}>{pkg.label}</option>)}
+                                </select>
+                              </div>
+                            );
+                            case 'ADDRESS': return (
+                              <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
+                                <textarea required placeholder="Address..." className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={3} value={previewData.address} onChange={e => setPreviewData({...previewData, address: e.target.value})} />
+                              </div>
+                            );
                             default: return null;
                          }
                       })}
-                      
-                      <div className="px-10 py-12">
-                         <button 
-                          type="submit"
-                          disabled={isSubmittingPreview}
-                          style={{ backgroundColor: previewForm.themeColor }} 
-                          className={`w-full text-white py-6 rounded-[2rem] font-black shadow-2xl uppercase tracking-[0.3em] text-sm transition-all active:scale-95 flex items-center justify-center gap-3 ${isSubmittingPreview ? 'opacity-70 cursor-wait' : 'hover:scale-[1.03]'}`}
-                         >
-                           {isSubmittingPreview && <span className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin"></span>}
-                           {isSubmittingPreview ? 'TRANSMITTING...' : previewForm.submitButtonText}
+                      <div className="px-10 mt-12">
+                         <button type="submit" disabled={isSubmittingPreview} style={{ backgroundColor: previewForm.themeColor }} className={`w-full text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm shadow-2xl ${isSubmittingPreview ? 'opacity-70' : ''}`}>
+                           {isSubmittingPreview ? 'Transmitting...' : previewForm.submitButtonText}
                          </button>
-                         <p className="text-[10px] text-center text-slate-300 mt-10 uppercase font-black tracking-[0.3em]">SECURE FULFILLMENT BY MAGIRA NETWORK</p>
                       </div>
                     </form>
                    )}

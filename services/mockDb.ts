@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
-  DeliveryStatus, OrderForm, WebLead, LeadStatus 
+  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart 
 } from '../types';
 
 const firebaseConfig = {
@@ -38,6 +38,7 @@ class FirebaseDb {
     forms: OrderForm[];
     leads: WebLead[];
     users: User[];
+    abandoned: AbandonedCart[];
   } = {
     products: [],
     states: [],
@@ -45,7 +46,8 @@ class FirebaseDb {
     orders: [],
     forms: [],
     leads: [],
-    users: []
+    users: [],
+    abandoned: []
   };
 
   private currentUser: User | null = null;
@@ -66,7 +68,6 @@ class FirebaseDb {
           
           if (userDoc.exists()) {
             this.currentUser = { id: fbUser.uid, ...userDoc.data() } as User;
-            // ONLY start syncing data if the user is approved
             if (this.currentUser.isApproved) {
               this.initRealtimeSync();
             } else {
@@ -91,30 +92,24 @@ class FirebaseDb {
     this.stopRealtimeSync();
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
-    // Admin syncs users, others don't
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
-    const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads'];
+    const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts'];
     
-    // Admins need to see the users collection to approve them
     if (isAdmin) {
       collectionsToSync.push('users');
     }
 
     collectionsToSync.forEach(colName => {
       try {
+        const key = colName === 'abandoned_carts' ? 'abandoned' : colName;
         const unsub = onSnapshot(
           collection(firestore, colName), 
           (snapshot) => {
-            this.data[colName as keyof typeof this.data] = snapshot.docs.map(d => ({
+            this.data[key as keyof typeof this.data] = snapshot.docs.map(d => ({
               id: d.id,
               ...d.data()
             })) as any;
             this.notify();
-          },
-          (error) => {
-            if (!error.message.includes('permission-denied')) {
-              console.warn(`Sync Warning [${colName}]:`, error.message);
-            }
           }
         );
         this.unsubscribers.push(unsub);
@@ -140,7 +135,6 @@ class FirebaseDb {
   getCurrentUser() { return this.currentUser; }
   getUsers() { return [...this.data.users]; }
   
-  // Helper to count users waiting for approval (for sidebar badge)
   getPendingUserCount() {
     return this.data.users.filter(u => u.status === 'pending').length;
   }
@@ -196,7 +190,6 @@ class FirebaseDb {
   }
 
   async approveUser(userId: string) {
-    // Only admins can do this via Firestore rules, but we check local state too
     if (this.currentUser?.role !== UserRole.ADMIN) return;
     await updateDoc(doc(firestore, 'users', userId), { status: 'approved', isApproved: true });
   }
@@ -207,8 +200,6 @@ class FirebaseDb {
   }
 
   async switchUserRole(newRole: UserRole) {
-    // SECURITY: Only an Admin can change their own view for testing
-    // Or change others via the users collection.
     if (this.currentUser?.role === UserRole.ADMIN) {
       this.currentUser.role = newRole;
       this.notify();
@@ -223,6 +214,7 @@ class FirebaseDb {
   getLogistics() { return [...this.data.logistics]; }
   getForms() { return [...this.data.forms]; }
   getLeads() { return [...this.data.leads]; }
+  getAbandonedCarts() { return [...this.data.abandoned]; }
 
   async saveProduct(product: Product) {
     const { id, ...rest } = product;
@@ -259,6 +251,9 @@ class FirebaseDb {
   async deleteLead(leadId: string) {
     await deleteDoc(doc(firestore, 'leads', leadId));
   }
+  async deleteAbandonedCart(cartId: string) {
+    await deleteDoc(doc(firestore, 'abandoned_carts', cartId));
+  }
   async updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
     const updates: any = { status };
     if (notes) updates.notes = notes;
@@ -286,7 +281,6 @@ class FirebaseDb {
       });
     }
   }
-  async clearAllData() {}
 }
 
 export const db = new FirebaseDb();

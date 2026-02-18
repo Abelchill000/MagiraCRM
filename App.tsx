@@ -12,6 +12,7 @@ import WhatsAppCenter from './pages/WhatsAppCenter.tsx';
 import Analytics from './pages/Analytics.tsx';
 import FormBuilder from './pages/FormBuilder.tsx';
 import WebLeads from './pages/WebLeads.tsx';
+import AbandonedCarts from './pages/AbandonedCarts.tsx';
 import UserManagement from './pages/UserManagement.tsx';
 import DatabaseExplorer from './pages/DatabaseExplorer.tsx';
 
@@ -37,7 +38,6 @@ const App: React.FC = () => {
       setUser(currentUser);
       setIsReady(db.isAuthReady());
       
-      // Strict redirect: If user is logged in but not approved, they MUST be on the pending screen
       if (currentUser && !currentUser.isApproved) {
         setAuthView('pending');
       }
@@ -78,8 +78,6 @@ const App: React.FC = () => {
         signUpData.password, 
         UserRole.SALES_AGENT
       );
-      // After registration, user is logged in but isApproved is false, 
-      // subscriber handles the UI switch to 'pending'
     } catch (err: any) {
       setAuthError(err.message || 'Registration Failure');
     } finally {
@@ -96,7 +94,6 @@ const App: React.FC = () => {
   };
 
   const handleRoleSwitch = async (newRole: UserRole) => {
-    // Only Admin can do this (verified in mockDb.ts)
     const updatedUser = await db.switchUserRole(newRole);
     if (updatedUser) {
       setUser({ ...updatedUser });
@@ -106,7 +103,6 @@ const App: React.FC = () => {
     }
   };
 
-  // 1. Initial Auth Check Loading
   if (!isReady) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-emerald-50">
@@ -116,7 +112,6 @@ const App: React.FC = () => {
     );
   }
 
-  // 2. Auth Guard: If no user or user is logged in but not approved
   if (!user || !user.isApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-emerald-50 p-4">
@@ -244,7 +239,6 @@ const App: React.FC = () => {
     );
   }
 
-  // 3. Main Dashboard Rendering (Only for Approved Users)
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
@@ -255,6 +249,7 @@ const App: React.FC = () => {
       case 'analytics': return <Analytics />;
       case 'formbuilder': return <FormBuilder />;
       case 'leads': return <WebLeads userRole={user.role} />;
+      case 'abandoned': return <AbandonedCarts userRole={user.role} />;
       case 'users': return <UserManagement />;
       case 'database': return <DatabaseExplorer />;
       default: return <Dashboard />;
