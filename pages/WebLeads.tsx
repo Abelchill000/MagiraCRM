@@ -300,10 +300,15 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                           {lead.whatsapp && (
                             <button onClick={() => window.open(`https://wa.me/${lead.whatsapp?.replace(/\D/g, '')}`)} className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition shadow-sm">📲</button>
                           )}
-                          {lead.status === LeadStatus.NEW && (
-                            <button onClick={() => { setSelectedLead(lead); setShowConvertModal(true); }} className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg shadow-emerald-100">Convert</button>
+                          {!linkedOrder && (lead.status === LeadStatus.NEW || canManageFulfillment) && (
+                            <button 
+                              onClick={() => { setSelectedLead(lead); setShowConvertModal(true); }} 
+                              className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg shadow-emerald-100"
+                            >
+                              {lead.status === LeadStatus.NEW ? 'Convert' : 'Move to Orders'}
+                            </button>
                           )}
-                          {(isAdmin || isSuperAgent) && (
+                          {canManageFulfillment && (
                             <button onClick={() => handleDeleteLead(lead.id)} className="p-3 bg-slate-50 text-slate-300 hover:text-red-600 rounded-xl transition">🗑️</button>
                           )}
                         </div>
