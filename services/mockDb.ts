@@ -124,7 +124,7 @@ class FirebaseDb {
 
   subscribe(listener: Listener) {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => { this.listeners.delete(listener); };
   }
 
   private notify() {
@@ -176,7 +176,7 @@ class FirebaseDb {
     if (profile.status === 'pending') throw new Error("Account pending approval");
     if (profile.status === 'rejected') throw new Error("Account access denied");
     
-    this.currentUser = { id: userCredential.user.uid, ...profile };
+    this.currentUser = { ...profile, id: userCredential.user.uid };
     this.initRealtimeSync();
     this.notify();
     return this.currentUser;

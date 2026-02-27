@@ -36,6 +36,19 @@ const Dashboard: React.FC = () => {
     const totalConverted = orders.filter(o => !!o.leadId).length;
     const conversionRate = leads.length > 0 ? (totalConverted / leads.length) * 100 : 0;
 
+    // Lead Pipeline Value
+    const leadPipeline = leads.reduce((acc, lead) => {
+      const leadValue = lead.items.reduce((itemAcc, item) => {
+        const product = products.find(p => p.id === item.productId);
+        return itemAcc + (product ? product.sellingPrice * item.quantity : 0);
+      }, 0);
+      
+      const status = lead.status;
+      acc[status] = (acc[status] || 0) + leadValue;
+      acc.total = (acc.total || 0) + leadValue;
+      return acc;
+    }, { total: 0 } as Record<string, number>);
+
     // Reminders
     const remindersToday = orders.filter(o => 
       o.deliveryStatus === DeliveryStatus.RESCHEDULED && 
@@ -54,9 +67,10 @@ const Dashboard: React.FC = () => {
       rescheduled: rescheduledCount,
       leadsToday,
       conversionRate,
+      leadPipeline,
       remindersToday
     };
-  }, [orders, leads]);
+  }, [orders, leads, products]);
 
   const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 
@@ -99,6 +113,86 @@ const Dashboard: React.FC = () => {
           <p className="text-sm font-medium text-slate-500">Web Leads Today</p>
           <p className="text-2xl font-bold text-blue-600 mt-1">{stats.leadsToday}</p>
           <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase">Conversion: {stats.conversionRate.toFixed(1)}%</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Sales & Lead Pipeline</h3>
+              <p className="text-xs text-slate-500">Monetary value of generated leads vs realized revenue.</p>
+            </div>
+            <div className="flex gap-4">
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Lead Value</p>
+                <p className="text-xl font-black text-slate-900">₦{stats.leadPipeline.total.toLocaleString()}</p>
+              </div>
+              <div className="w-px h-10 bg-slate-100" />
+              <div className="text-right">
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Delivered Value</p>
+                <p className="text-xl font-black text-emerald-600">₦{stats.realizedRevenue.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead Status Distribution (Value)</span>
+                <span className="text-[10px] font-bold text-slate-500">{leads.length} Total Leads</span>
+              </div>
+              <div className="relative h-6 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                <div 
+                  style={{ width: `${stats.leadPipeline.total > 0 ? (stats.leadPipeline[LeadStatus.VERIFIED] || 0) / stats.leadPipeline.total * 100 : 0}%` }} 
+                  className="bg-emerald-500 h-full transition-all duration-500"
+                  title="Verified"
+                />
+                <div 
+                  style={{ width: `${stats.leadPipeline.total > 0 ? (stats.leadPipeline[LeadStatus.NEW] || 0) / stats.leadPipeline.total * 100 : 0}%` }} 
+                  className="bg-blue-500 h-full transition-all duration-500"
+                  title="New"
+                />
+                <div 
+                  style={{ width: `${stats.leadPipeline.total > 0 ? ((stats.leadPipeline[LeadStatus.REJECTED] || 0) + (stats.leadPipeline[LeadStatus.FAKE] || 0)) / stats.leadPipeline.total * 100 : 0}%` }} 
+                  className="bg-slate-300 h-full transition-all duration-500"
+                  title="Rejected/Fake"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                <p className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-1">Verified Leads</p>
+                <p className="text-sm font-bold text-emerald-900">₦{(stats.leadPipeline[LeadStatus.VERIFIED] || 0).toLocaleString()}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-[9px] font-black text-blue-700 uppercase tracking-widest mb-1">New Leads</p>
+                <p className="text-sm font-bold text-blue-900">₦{(stats.leadPipeline[LeadStatus.NEW] || 0).toLocaleString()}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Rejected/Fake</p>
+                <p className="text-sm font-bold text-slate-700">₦{((stats.leadPipeline[LeadStatus.REJECTED] || 0) + (stats.leadPipeline[LeadStatus.FAKE] || 0)).toLocaleString()}</p>
+              </div>
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Pipeline Efficiency</p>
+                <p className="text-sm font-bold text-white">
+                  {stats.leadPipeline.total > 0 ? ((stats.realizedRevenue / stats.leadPipeline.total) * 100).toFixed(1) : 0}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center text-center">
+          <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Delivered Orders Total</p>
+          <p className="text-3xl font-black text-emerald-600">₦{stats.realizedRevenue.toLocaleString()}</p>
+          <p className="text-[10px] text-slate-400 mt-2">Total value of all orders marked as <span className="text-emerald-600 font-bold">Delivered</span></p>
         </div>
       </div>
 

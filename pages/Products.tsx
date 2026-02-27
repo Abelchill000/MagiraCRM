@@ -79,14 +79,14 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     }
   };
 
-  const handleTransfer = (e: React.FormEvent) => {
+  const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const stateId = formData.get('stateId') as string;
     const qty = Number(formData.get('quantity'));
     
     if (transferModal.productId && stateId && qty > 0) {
-      const success = db.transferStock(transferModal.productId, stateId, qty);
+      const success = await db.transferStock(transferModal.productId, stateId, qty);
       if (success) {
         setProducts([...db.getProducts()]);
         setTransferModal({ isOpen: false, productId: null });

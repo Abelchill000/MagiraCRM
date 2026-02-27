@@ -146,7 +146,7 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                           <>
                             <button onClick={() => window.open(`tel:${cart.phone}`)} className="p-3 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-800 hover:text-white transition" title="Call Now">📞</button>
                             {cart.whatsapp && (
-                               <button onClick={() => window.open(`https://wa.me/${cart.whatsapp.replace(/\D/g, '')}`)} className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition" title="WhatsApp Follow-up">📲</button>
+                               <button onClick={() => window.open(`https://wa.me/${(cart.whatsapp || '').replace(/\D/g, '')}`)} className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition" title="WhatsApp Follow-up">📲</button>
                             )}
                           </>
                         )}
