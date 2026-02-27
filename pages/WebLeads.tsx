@@ -6,24 +6,34 @@ import { WebLead, LeadStatus, UserRole, State, PaymentStatus, DeliveryStatus, Or
 const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const user = db.getCurrentUser();
   const [leads, setLeads] = useState<WebLead[]>(db.getLeads());
+  const [orders, setOrders] = useState<Order[]>(db.getOrders());
   const [states, setStates] = useState<State[]>(db.getStates());
   const [forms, setForms] = useState<OrderForm[]>(db.getForms());
   const [products] = useState(db.getProducts());
   const [selectedLead, setSelectedLead] = useState<WebLead | null>(null);
   const [viewingLead, setViewingLead] = useState<WebLead | null>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
+  
+  const [showLogisticsPrompt, setShowLogisticsPrompt] = useState<{orderId: string, leadId: string} | null>(null);
+  const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
+
   const [convDetails, setConvDetails] = useState({
     stateId: '',
     paymentStatus: PaymentStatus.POD
   });
 
   const isAdmin = userRole === UserRole.ADMIN;
+  const isInventoryManager = user?.role === UserRole.INVENTORY_MANAGER;
+  const isLogisticsManager = user?.role === UserRole.LOGISTICS_MANAGER;
   // ONLY this specific agent gets Admin-level global visibility
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
+  
+  const canManageFulfillment = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
 
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
       setLeads(db.getLeads());
+      setOrders(db.getOrders());
       setStates(db.getStates());
       setForms(db.getForms());
     });
@@ -133,6 +143,32 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     return (now - leadTime) < 1000 * 60 * 5;
   };
 
+  const handleMarkDelivered = (orderId: string, leadId: string) => {
+    setShowLogisticsPrompt({ orderId, leadId });
+    setTempLogisticsCost(0);
+  };
+
+  const handleLogisticsSubmit = async () => {
+    if (showLogisticsPrompt) {
+      await db.updateOrderStatus(showLogisticsPrompt.orderId, DeliveryStatus.DELIVERED, { 
+        logisticsCost: tempLogisticsCost 
+      });
+      setShowLogisticsPrompt(null);
+      alert("Order marked as Delivered!");
+    }
+  };
+
+  const getDeliveryStatusColor = (status: DeliveryStatus) => {
+    switch (status) {
+      case DeliveryStatus.DELIVERED: return 'bg-emerald-100 text-emerald-700';
+      case DeliveryStatus.FAILED: return 'bg-red-100 text-red-700';
+      case DeliveryStatus.CANCELLED: return 'bg-slate-200 text-slate-600';
+      case DeliveryStatus.RESCHEDULED: return 'bg-amber-100 text-amber-700';
+      case DeliveryStatus.PENDING: return 'bg-blue-100 text-blue-700';
+      default: return 'bg-slate-100 text-slate-500';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -177,6 +213,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                 sortedLeads.map(lead => {
                   const formSource = forms.find(f => f.id === lead.formId);
                   const newBadge = isNewLead(lead.createdAt);
+                  const linkedOrder = orders.find(o => o.leadId === lead.id);
                   
                   return (
                     <tr key={lead.id} className={`hover:bg-slate-50/50 transition-all duration-300 group ${newBadge ? 'bg-emerald-50/20' : ''}`}>
@@ -194,18 +231,36 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                         </div>
                       </td>
                       <td className="px-8 py-5">
-                        <select 
-                          value={lead.status}
-                          onChange={(e) => updateStatus(lead.id, e.target.value as LeadStatus)}
-                          className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl border-none focus:ring-0 cursor-pointer shadow-sm ${
-                            lead.status === LeadStatus.NEW ? 'bg-blue-100 text-blue-700' :
-                            lead.status === LeadStatus.VERIFIED ? 'bg-emerald-100 text-emerald-700' :
-                            lead.status === LeadStatus.REJECTED ? 'bg-red-100 text-red-700' :
-                            'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {Object.values(LeadStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
+                        <div className="flex flex-col gap-2">
+                          <select 
+                            value={lead.status}
+                            onChange={(e) => updateStatus(lead.id, e.target.value as LeadStatus)}
+                            className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl border-none focus:ring-0 cursor-pointer shadow-sm ${
+                              lead.status === LeadStatus.NEW ? 'bg-blue-100 text-blue-700' :
+                              lead.status === LeadStatus.VERIFIED ? 'bg-emerald-100 text-emerald-700' :
+                              lead.status === LeadStatus.REJECTED ? 'bg-red-100 text-red-700' :
+                              'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {Object.values(LeadStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          
+                          {linkedOrder && (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${getDeliveryStatusColor(linkedOrder.deliveryStatus)}`}>
+                                {linkedOrder.deliveryStatus}
+                              </span>
+                              {canManageFulfillment && linkedOrder.deliveryStatus !== DeliveryStatus.DELIVERED && linkedOrder.deliveryStatus !== DeliveryStatus.CANCELLED && (
+                                <button 
+                                  onClick={() => handleMarkDelivered(linkedOrder.id, lead.id)}
+                                  className="text-[8px] font-black text-emerald-600 hover:underline uppercase"
+                                >
+                                  Mark Delivered
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-wrap gap-1">
@@ -348,6 +403,32 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                 <button type="button" onClick={() => setShowConvertModal(false)} className="w-full mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Logistics Cost Modal */}
+      {showLogisticsPrompt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110]">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Fulfillment Data</h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">Finalize the order by entering the logistics partner expense.</p>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Logistics/Shipping Cost (₦)</label>
+                <input 
+                  type="number" autoFocus
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-black text-2xl text-center" 
+                  value={tempLogisticsCost}
+                  onChange={(e) => setTempLogisticsCost(Number(e.target.value))}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <button onClick={handleLogisticsSubmit} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition active:scale-[0.98]">Mark as Delivered</button>
+                <button onClick={() => setShowLogisticsPrompt(null)} className="w-full py-2 text-slate-400 font-black text-[10px] uppercase tracking-widest">Go Back</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
