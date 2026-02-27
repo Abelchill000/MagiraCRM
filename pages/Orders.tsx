@@ -39,12 +39,16 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   }, []);
 
   const isAdmin = user.role === UserRole.ADMIN;
+  const isInventoryManager = user.role === UserRole.INVENTORY_MANAGER;
+  const isLogisticsManager = user.role === UserRole.LOGISTICS_MANAGER;
   // ONLY this specific agent gets Admin-level global visibility
   const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
+  const canManageAllOrders = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
+
   const orders = useMemo(() => {
-    // Admin and Super Agent see everything
-    if (isAdmin || isSuperAgent) {
+    // Managers and Admins see everything
+    if (canManageAllOrders) {
       return [...dbOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
     // Standard agents only see orders they created (or were converted from their leads)
@@ -114,13 +118,13 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const handleStatusChange = (orderId: string, status: DeliveryStatus) => {
-    // Super Agents and Admins have full status control
-    if (!isAdmin && !isSuperAgent && status !== DeliveryStatus.RESCHEDULED) {
-      alert("Standard Sales Agents can only change order status to 'Rescheduled'. Contact an Admin for other changes.");
+    // Managers and Admins have full status control
+    if (!canManageAllOrders && status !== DeliveryStatus.RESCHEDULED) {
+      alert("Standard Sales Agents can only change order status to 'Rescheduled'. Contact an Admin/Manager for other changes.");
       return;
     }
 
-    if (status === DeliveryStatus.DELIVERED && (isAdmin || isSuperAgent)) {
+    if (status === DeliveryStatus.DELIVERED && canManageAllOrders) {
       setShowLogisticsPrompt({ orderId, status });
       setTempLogisticsCost(0);
     } else if (status === DeliveryStatus.RESCHEDULED) {
@@ -217,12 +221,12 @@ Stay Healthy, Stay Energized!`.trim();
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             Order Management
-            {(isSuperAgent && !isAdmin) && (
-              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Network Admin Mode</span>
+            {(canManageAllOrders && !isAdmin) && (
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Manager Mode</span>
             )}
           </h1>
           <p className="text-slate-500 text-sm font-medium">
-            {isAdmin || isSuperAgent ? 'Global order tracking console.' : 'Tracking orders processed by your sales account.'}
+            {canManageAllOrders ? 'Global order tracking console.' : 'Tracking orders processed by your sales account.'}
           </p>
         </div>
         <button 
@@ -272,7 +276,7 @@ Stay Healthy, Stay Energized!`.trim();
                         className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border-none focus:ring-0 cursor-pointer ${getStatusColor(order.deliveryStatus)}`}
                       >
                         {Object.values(DeliveryStatus).map(s => {
-                          if (!isAdmin && !isSuperAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
+                          if (!canManageAllOrders && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
                           return <option key={s} value={s}>{s}</option>;
                         })}
                       </select>
@@ -285,7 +289,7 @@ Stay Healthy, Stay Energized!`.trim();
                         <button onClick={() => setViewingOrder(order)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="View Details">👁️</button>
                         <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Copy Receipt">📄</button>
                         <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="WhatsApp Customer">📲</button>
-                        {(isAdmin || isSuperAgent) && (
+                        {(canManageAllOrders) && (
                           <button onClick={() => { if(window.confirm('Delete order?')) {} }} className="p-2 text-slate-200 hover:text-red-600 rounded-lg transition-all">🗑️</button>
                         )}
                       </div>
@@ -325,7 +329,7 @@ Stay Healthy, Stay Energized!`.trim();
                   className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl border-none focus:ring-0 cursor-pointer w-40 ${getStatusColor(order.deliveryStatus)}`}
                 >
                   {Object.values(DeliveryStatus).map(s => {
-                    if (!isAdmin && !isSuperAgent && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
+                    if (!canManageAllOrders && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
                     return <option key={s} value={s}>{s}</option>;
                   })}
                 </select>

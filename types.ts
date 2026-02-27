@@ -2,7 +2,9 @@
 export enum UserRole {
   ADMIN = 'Admin',
   STATE_MANAGER = 'State Manager',
-  SALES_AGENT = 'Sales Agent'
+  SALES_AGENT = 'Sales Agent',
+  INVENTORY_MANAGER = 'Inventory Manager',
+  LOGISTICS_MANAGER = 'Logistics Manager'
 }
 
 export enum PaymentStatus {

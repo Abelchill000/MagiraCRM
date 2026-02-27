@@ -11,8 +11,8 @@ const Logistics: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [showLogisticsModal, setShowLogisticsModal] = useState(false);
   const [editingState, setEditingState] = useState<State | null>(null);
 
-  // Access check for specific email
-  const isLogisticsManager = user?.email === 'iconfidence909@gmail.com';
+  // Access check
+  const isLogisticsManager = user?.role === UserRole.LOGISTICS_MANAGER || user?.email === 'iconfidence909@gmail.com';
   const isAuthorized = userRole === UserRole.ADMIN || isLogisticsManager;
 
   const handleAddState = (e: React.FormEvent) => {

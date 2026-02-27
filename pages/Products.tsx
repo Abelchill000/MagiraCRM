@@ -30,8 +30,8 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     action: null
   });
 
-  // Access check for specific email
-  const isInventoryManager = user?.email === 'iconfidence909@gmail.com';
+  // Access check
+  const isInventoryManager = user?.role === UserRole.INVENTORY_MANAGER || user?.email === 'iconfidence909@gmail.com';
   const isAdminOrManager = userRole === UserRole.ADMIN || isInventoryManager;
 
   const filteredProducts = useMemo(() => {

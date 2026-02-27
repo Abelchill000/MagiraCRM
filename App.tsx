@@ -29,7 +29,7 @@ const App: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [signUpData, setSignUpData] = useState({ name: '', email: '', phone: '', password: '' });
+  const [signUpData, setSignUpData] = useState({ name: '', email: '', phone: '', password: '', role: UserRole.SALES_AGENT });
   const [isReady, setIsReady] = useState(db.isAuthReady());
 
   useEffect(() => {
@@ -76,7 +76,7 @@ const App: React.FC = () => {
         signUpData.email, 
         signUpData.phone,
         signUpData.password, 
-        UserRole.SALES_AGENT
+        signUpData.role || UserRole.SALES_AGENT
       );
     } catch (err: any) {
       setAuthError(err.message || 'Registration Failure');
@@ -190,6 +190,20 @@ const App: React.FC = () => {
                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500"
                     onChange={e => setSignUpData({...signUpData, phone: e.target.value})}
                   />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Requested Role</label>
+                  <select 
+                    required
+                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-bold text-sm"
+                    onChange={e => setSignUpData({...signUpData, role: e.target.value as UserRole})}
+                    value={signUpData.role || UserRole.SALES_AGENT}
+                  >
+                    <option value={UserRole.SALES_AGENT}>Sales Agent</option>
+                    <option value={UserRole.INVENTORY_MANAGER}>Inventory Manager</option>
+                    <option value={UserRole.LOGISTICS_MANAGER}>Logistics Manager</option>
+                    <option value={UserRole.STATE_MANAGER}>State Manager</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password</label>

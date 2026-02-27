@@ -20,30 +20,30 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
   const isPrivilegedUser = user?.email === 'iconfidence909@gmail.com';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
     { 
       id: 'products', 
-      label: (userRole === UserRole.ADMIN || isPrivilegedUser) ? 'Inventory' : 'Stock Levels', 
+      label: (userRole === UserRole.ADMIN || userRole === UserRole.INVENTORY_MANAGER || isPrivilegedUser) ? 'Inventory' : 'Stock Levels', 
       icon: '📦', 
-      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER],
+      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER],
       specialAccess: isPrivilegedUser
     },
-    { id: 'leads', label: 'Web Leads', icon: '⚡', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
+    { id: 'leads', label: 'Web Leads', icon: '⚡', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
     { 
       id: 'abandoned', 
       label: 'Lost Carts', 
       icon: '🛒', 
-      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT],
+      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER],
       badge: abandonedCount > 0 ? abandonedCount : null,
       badgeColor: 'bg-amber-500'
     },
-    { id: 'orders', label: 'Orders', icon: '📦', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
+    { id: 'orders', label: 'Orders', icon: '📦', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
     { id: 'formbuilder', label: 'Page Builder', icon: '🧱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
     { 
       id: 'logistics', 
       label: 'Logistics', 
       icon: '🚚', 
-      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER],
+      roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.LOGISTICS_MANAGER, UserRole.INVENTORY_MANAGER],
       specialAccess: isPrivilegedUser
     },
     { 

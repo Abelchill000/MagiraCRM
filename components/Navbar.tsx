@@ -24,15 +24,31 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onRoleSwitch, toggleSid
       </div>
 
       <div className="flex items-center space-x-2 md:space-x-6">
-        {/* Role Switcher - ADMIN ONLY - allows viewing the app as an agent */}
+        {/* Role Switcher - ADMIN ONLY */}
         {isAdmin && (
-          <button
-            onClick={() => onRoleSwitch(UserRole.SALES_AGENT)}
-            className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700"
-          >
-            <span>🔄</span>
-            <span>Switch to Agent View</span>
-          </button>
+          <div className="hidden lg:flex items-center gap-2">
+            <button
+              onClick={() => onRoleSwitch(UserRole.SALES_AGENT)}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              <span>🔄</span>
+              <span>Agent View</span>
+            </button>
+            <button
+              onClick={() => onRoleSwitch(UserRole.INVENTORY_MANAGER)}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              <span>🔄</span>
+              <span>Inventory View</span>
+            </button>
+            <button
+              onClick={() => onRoleSwitch(UserRole.LOGISTICS_MANAGER)}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-amber-50 hover:text-amber-700"
+            >
+              <span>🔄</span>
+              <span>Logistics View</span>
+            </button>
+          </div>
         )}
 
         <div className="flex items-center space-x-2 md:space-x-4">
