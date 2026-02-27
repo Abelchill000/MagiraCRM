@@ -8,9 +8,18 @@ import {
 } from 'recharts';
 
 const Dashboard: React.FC = () => {
-  const orders = db.getOrders();
-  const products = db.getProducts();
-  const leads = db.getLeads();
+  const [orders, setOrders] = React.useState(db.getOrders());
+  const [products, setProducts] = React.useState(db.getProducts());
+  const [leads, setLeads] = React.useState(db.getLeads());
+
+  React.useEffect(() => {
+    const unsub = db.subscribe(() => {
+      setOrders(db.getOrders());
+      setProducts(db.getProducts());
+      setLeads(db.getLeads());
+    });
+    return unsub;
+  }, []);
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -39,7 +48,17 @@ const Dashboard: React.FC = () => {
     // Lead Pipeline Value
     const leadPipeline = leads.reduce((acc, lead) => {
       const leadValue = lead.items.reduce((itemAcc, item) => {
-        const product = products.find(p => p.id === item.productId);
+        // Try exact ID match first
+        let product = products.find(p => p.id === item.productId);
+        
+        // Fallback: Try matching by name or slug if ID fails (common for external leads)
+        if (!product) {
+          product = products.find(p => 
+            p.name.toLowerCase().includes('ginger') || 
+            p.sku.toLowerCase().includes('ginger')
+          );
+        }
+
         return itemAcc + (product ? product.sellingPrice * item.quantity : 0);
       }, 0);
       
