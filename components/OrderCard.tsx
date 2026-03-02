@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Order, DeliveryStatus, UserRole, State } from '../types';
-import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, FileText, Trash2, Package, Truck, CreditCard } from 'lucide-react';
+import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, FileText, Trash2, Package, Truck, CreditCard, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface OrderCardProps {
@@ -101,11 +101,17 @@ const OrderCard: React.FC<OrderCardProps> = ({
       </div>
 
       {/* Location */}
-      <div className="flex items-center gap-2 text-slate-400 mb-8">
-        <MapPin size={16} />
-        <p className="text-sm font-bold truncate">
-          {order.address.split(',')[0]}, <span className="text-blue-600 uppercase">{stateName}</span>
-        </p>
+      <div className="flex flex-col gap-2 mb-8">
+        <div className="flex items-center gap-2 text-slate-400">
+          <MapPin size={16} />
+          <p className="text-sm font-bold truncate">{order.address}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Globe size={14} className="text-blue-500" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+            Selected State: {stateName}
+          </p>
+        </div>
       </div>
 
       <div className="h-px bg-slate-50 mb-8" />

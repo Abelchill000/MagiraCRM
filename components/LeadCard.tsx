@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { WebLead, LeadStatus, Order, OrderForm, Product, DeliveryStatus } from '../types';
-import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, Edit2, Trash2, Zap, Package } from 'lucide-react';
+import { WebLead, LeadStatus, Order, OrderForm, Product, DeliveryStatus, State } from '../types';
+import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, Edit2, Trash2, Zap, Package, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface LeadCardProps {
@@ -16,6 +16,7 @@ interface LeadCardProps {
   onMarkDelivered: (orderId: string, leadId: string) => void;
   formSource?: OrderForm;
   products: Product[];
+  states: State[];
   isNew?: boolean;
 }
 
@@ -31,6 +32,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
   onMarkDelivered,
   formSource,
   products,
+  states,
   isNew
 }) => {
   const estimatedValue = lead.items.reduce((acc, item) => {
@@ -53,6 +55,8 @@ const LeadCard: React.FC<LeadCardProps> = ({
       default: return 'bg-slate-100 text-slate-500';
     }
   };
+
+  const stateName = states.find(s => s.id === lead.stateId || s.name === lead.stateId)?.name || 'Not Assigned';
 
   return (
     <motion.div 
@@ -129,11 +133,17 @@ const LeadCard: React.FC<LeadCardProps> = ({
       </div>
 
       {/* Location */}
-      <div className="flex items-center gap-2 text-slate-400 mb-8">
-        <MapPin size={16} />
-        <p className="text-sm font-bold truncate">
-          {lead.address.split(',')[0]}, <span className="text-blue-600 uppercase">{lead.address.split(',').pop()?.trim()}</span>
-        </p>
+      <div className="flex flex-col gap-2 mb-8">
+        <div className="flex items-center gap-2 text-slate-400">
+          <MapPin size={16} />
+          <p className="text-sm font-bold truncate">{lead.address}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Globe size={14} className="text-blue-500" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+            Selected State: {stateName}
+          </p>
+        </div>
       </div>
 
       <div className="h-px bg-slate-50 mb-8" />

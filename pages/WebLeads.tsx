@@ -201,6 +201,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               onMarkDelivered={handleMarkDelivered}
               formSource={forms.find(f => f.id === lead.formId)}
               products={products}
+              states={states}
               isNew={isNewLead(lead.createdAt)}
             />
           ))
