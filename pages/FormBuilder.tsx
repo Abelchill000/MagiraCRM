@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb';
 import { OrderForm, Product, State, FormSection, SectionType, WebLead, LeadStatus, User } from '../types';
 
@@ -59,7 +59,17 @@ const FormBuilder: React.FC = () => {
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
   const [isSubmittingPreview, setIsSubmittingPreview] = useState(false);
 
-  const handleSave = (e?: React.FormEvent) => {
+  useEffect(() => {
+    const unsub = db.subscribe(() => {
+      setForms(db.getForms());
+      if (user?.role === 'Admin') {
+        setUsers(db.getUsers().filter(u => u.isApproved));
+      }
+    });
+    return unsub;
+  }, [user?.role]);
+
+  const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!editingForm || !user) return;
 
@@ -79,7 +89,7 @@ const FormBuilder: React.FC = () => {
       assignedToName: editingForm.assignedToName
     };
 
-    db.saveForm(form);
+    await db.saveForm(form);
     setForms([...db.getForms()]);
     setShowModal(false);
     setEditingForm(null);
@@ -441,6 +451,24 @@ const FormBuilder: React.FC = () => {
                     Get Link
                   </button>
                 </div>
+                {user?.role === 'Admin' && (
+                  <div className="mt-2 border-t border-slate-50 pt-2">
+                    <select 
+                      className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-500 focus:ring-1 focus:ring-emerald-500"
+                      value={form.assignedToName || ''}
+                      onChange={async (e) => {
+                        const updatedForm = { ...form, assignedToName: e.target.value };
+                        await db.saveForm(updatedForm);
+                        setForms(db.getForms());
+                      }}
+                    >
+                      <option value="">Quick Assign Agent...</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.name}>{u.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           </div>
