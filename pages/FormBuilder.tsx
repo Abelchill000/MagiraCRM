@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { db } from '../services/mockDb';
-import { OrderForm, Product, State, FormSection, SectionType, WebLead, LeadStatus } from '../types';
+import { OrderForm, Product, State, FormSection, SectionType, WebLead, LeadStatus, User } from '../types';
 
 const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
@@ -40,6 +40,7 @@ const NIGERIA_STATES = [
 const FormBuilder: React.FC = () => {
   const user = db.getCurrentUser();
   const [forms, setForms] = useState<OrderForm[]>(db.getForms());
+  const [users, setUsers] = useState<User[]>(user?.role === 'Admin' ? db.getUsers().filter(u => u.isApproved) : []);
   const [showModal, setShowModal] = useState(false);
   const [editingForm, setEditingForm] = useState<Partial<OrderForm> | null>(null);
   const [previewForm, setPreviewForm] = useState<OrderForm | null>(null);
@@ -74,7 +75,8 @@ const FormBuilder: React.FC = () => {
       submitButtonText: editingForm.submitButtonText || 'Place Order Now',
       successMessage: editingForm.successMessage || 'Thank you! Your order request has been received.',
       thankYouUrl: editingForm.thankYouUrl || '',
-      createdBy: user.name
+      createdBy: editingForm.createdBy || user.name,
+      assignedToName: editingForm.assignedToName
     };
 
     db.saveForm(form);
@@ -140,6 +142,7 @@ const FormBuilder: React.FC = () => {
   };
 
   const getEmbedCode = (form: OrderForm) => {
+    const agentName = form.assignedToName || form.createdBy;
     const packageOptions = PACKAGES.map(pkg => 
       `<option value='{"qty":${pkg.qty}, "price":${pkg.price}}'>${pkg.label}</option>`
     ).join('\n            ');
@@ -175,7 +178,7 @@ const FormBuilder: React.FC = () => {
       }
     }).join('\n');
 
-    return `<!-- Magira Lead Recovery Logic: Generated for ${form.createdBy} -->
+    return `<!-- Magira Lead Recovery Logic: Generated for ${agentName} -->
 <div id="magira-container-${form.id}" style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 20px auto; border: 1px solid #f1f5f9; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08); background: white;">
   <form id="magira-form-${form.id}" style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 32px;">
     ${sectionsHtml}
@@ -192,7 +195,7 @@ const FormBuilder: React.FC = () => {
 <script>
 (function() {
   const formId = "${form.id}";
-  const agentName = "${form.createdBy}";
+  const agentName = "${agentName}";
   const apiKey = "AIzaSyDjIST5wP--TJhSxmbDqvgTSHUUFeMJVwE";
   const projectId = "magiracrm";
   const sessionId = 'SESS-' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -397,12 +400,17 @@ const FormBuilder: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {forms.filter(f => user?.role === 'Admin' || f.createdBy === user?.name).map(form => (
+        {forms.filter(f => user?.role === 'Admin' || f.createdBy === user?.name || f.assignedToName === user?.name).map(form => (
           <div key={form.id} className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col group">
             <div className="h-3" style={{ backgroundColor: form.themeColor }}></div>
             <div className="p-8 flex-1 flex flex-col">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="font-black text-slate-800 text-lg leading-tight uppercase truncate">{form.title}</h3>
+                {form.assignedToName && (
+                  <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg uppercase tracking-widest">
+                    Assigned to: {form.assignedToName}
+                  </span>
+                )}
               </div>
               
               <div className="mt-2 mb-8 flex flex-wrap gap-1.5">
@@ -489,6 +497,23 @@ const FormBuilder: React.FC = () => {
                     <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Brand Color</label>
                     <input type="color" className="w-full h-10 border-none rounded-xl cursor-pointer" value={editingForm?.themeColor} onChange={e => setEditingForm({...editingForm, themeColor: e.target.value})} />
                 </div>
+
+                {user?.role === 'Admin' && (
+                  <div className="pt-6 border-t border-slate-200">
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Assign to Agent</label>
+                    <select 
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                      value={editingForm?.assignedToName || ''}
+                      onChange={e => setEditingForm({...editingForm, assignedToName: e.target.value})}
+                    >
+                      <option value="">-- No Assignment --</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+                      ))}
+                    </select>
+                    <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">When assigned, leads captured by this form will automatically belong to this agent.</p>
+                  </div>
+                )}
               </div>
             </div>
 

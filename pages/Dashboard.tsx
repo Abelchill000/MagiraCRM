@@ -1,16 +1,31 @@
 
 import React, { useMemo } from 'react';
 import { db } from '../services/mockDb.ts';
-import { DeliveryStatus, LeadStatus, Order } from '../types.ts';
+import { DeliveryStatus, LeadStatus, Order, UserRole } from '../types.ts';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
 const Dashboard: React.FC = () => {
+  const user = db.getCurrentUser();
   const [orders, setOrders] = React.useState(db.getOrders());
   const [products, setProducts] = React.useState(db.getProducts());
   const [leads, setLeads] = React.useState(db.getLeads());
+
+  const isAdmin = user?.role === UserRole.ADMIN;
+  // Special access emails
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
+
+  const filteredOrders = useMemo(() => {
+    if (isAdmin || isSuperAgent) return orders;
+    return orders.filter(o => o.createdBy === user?.name);
+  }, [orders, isAdmin, isSuperAgent, user?.name]);
+
+  const filteredLeads = useMemo(() => {
+    if (isAdmin || isSuperAgent) return leads;
+    return leads.filter(l => l.agentName === user?.name);
+  }, [leads, isAdmin, isSuperAgent, user?.name]);
 
   React.useEffect(() => {
     const unsub = db.subscribe(() => {
@@ -23,7 +38,7 @@ const Dashboard: React.FC = () => {
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const deliveredOrders = orders.filter(o => o.deliveryStatus === DeliveryStatus.DELIVERED);
+    const deliveredOrders = filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.DELIVERED);
     
     const salesToday = deliveredOrders.filter(o => o.createdAt.startsWith(today)).reduce((acc, o) => acc + o.totalAmount, 0);
     const realizedRevenue = deliveredOrders.reduce((acc, o) => acc + o.totalAmount, 0);
@@ -35,18 +50,18 @@ const Dashboard: React.FC = () => {
 
     const netProfit = realizedRevenue - totalLogisticsExpense - totalCOGS;
 
-    const deliveredCount = orders.filter(o => o.deliveryStatus === DeliveryStatus.DELIVERED).length;
-    const pendingCount = orders.filter(o => o.deliveryStatus === DeliveryStatus.PENDING).length;
-    const failedCount = orders.filter(o => o.deliveryStatus === DeliveryStatus.FAILED).length;
-    const rescheduledCount = orders.filter(o => o.deliveryStatus === DeliveryStatus.RESCHEDULED).length;
+    const deliveredCount = filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.DELIVERED).length;
+    const pendingCount = filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.PENDING).length;
+    const failedCount = filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.FAILED).length;
+    const rescheduledCount = filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.RESCHEDULED).length;
 
     // Lead Stats
-    const leadsToday = leads.filter(l => l.createdAt.startsWith(today)).length;
-    const totalConverted = orders.filter(o => !!o.leadId).length;
-    const conversionRate = leads.length > 0 ? (totalConverted / leads.length) * 100 : 0;
+    const leadsToday = filteredLeads.filter(l => l.createdAt.startsWith(today)).length;
+    const totalConverted = filteredOrders.filter(o => !!o.leadId).length;
+    const conversionRate = filteredLeads.length > 0 ? (totalConverted / filteredLeads.length) * 100 : 0;
 
     // Lead Pipeline Value
-    const leadPipeline = leads.reduce((acc, lead) => {
+    const leadPipeline = filteredLeads.reduce((acc, lead) => {
       const leadValue = lead.items.reduce((itemAcc, item) => {
         // Try exact ID match first
         let product = products.find(p => p.id === item.productId);
@@ -69,7 +84,7 @@ const Dashboard: React.FC = () => {
     }, { total: 0 } as Record<string, number>);
 
     // Reminders
-    const remindersToday = orders.filter(o => 
+    const remindersToday = filteredOrders.filter(o => 
       o.deliveryStatus === DeliveryStatus.RESCHEDULED && 
       o.rescheduleDate === today &&
       o.reminderEnabled
@@ -89,7 +104,7 @@ const Dashboard: React.FC = () => {
       leadPipeline,
       remindersToday
     };
-  }, [orders, leads, products]);
+  }, [filteredOrders, filteredLeads, products]);
 
   const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 
@@ -159,7 +174,7 @@ const Dashboard: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead Status Distribution (Value)</span>
-                <span className="text-[10px] font-bold text-slate-500">{leads.length} Total Leads</span>
+                <span className="text-[10px] font-bold text-slate-500">{filteredLeads.length} Total Leads</span>
               </div>
               <div className="relative h-6 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
                 <div 
@@ -265,7 +280,7 @@ const Dashboard: React.FC = () => {
             )}
           </div>
           <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Active Reminders: {orders.filter(o => o.deliveryStatus === DeliveryStatus.RESCHEDULED && o.reminderEnabled).length}</p>
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Active Reminders: {filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.RESCHEDULED && o.reminderEnabled).length}</p>
           </div>
         </div>
       </div>

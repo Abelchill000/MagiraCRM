@@ -109,6 +109,7 @@ export interface OrderForm {
   successMessage: string;
   thankYouUrl?: string;
   createdBy: string; // User name or ID
+  assignedToName?: string; // Optional: Assign form to a specific agent
 }
 
 export interface WebLead {
