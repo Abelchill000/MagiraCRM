@@ -26,7 +26,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const isInventoryManager = user?.role === UserRole.INVENTORY_MANAGER;
   const isLogisticsManager = user?.role === UserRole.LOGISTICS_MANAGER;
   // ONLY this specific agent gets Admin-level global visibility
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
   
   const canManageFulfillment = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
 

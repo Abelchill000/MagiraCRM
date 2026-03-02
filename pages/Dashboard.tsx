@@ -15,7 +15,7 @@ const Dashboard: React.FC = () => {
 
   const isAdmin = user?.role === UserRole.ADMIN;
   // Special access emails
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com' || user?.email === 'iconfidence909@gmail.com';
+  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
   const filteredOrders = useMemo(() => {
     if (isAdmin || isSuperAgent) return orders;
