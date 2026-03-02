@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from './services/mockDb.ts';
 import { User, UserRole } from './types.ts';
 
@@ -31,10 +31,18 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [signUpData, setSignUpData] = useState({ name: '', email: '', phone: '', password: '', role: UserRole.SALES_AGENT });
   const [isReady, setIsReady] = useState(db.isAuthReady());
+  const prevImpersonating = useRef(db.isImpersonating());
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
       const currentUser = db.getCurrentUser();
+      const currentlyImpersonating = db.isImpersonating();
+
+      if (currentlyImpersonating && !prevImpersonating.current) {
+        setActiveTab('dashboard');
+      }
+      prevImpersonating.current = currentlyImpersonating;
+
       setUser(currentUser);
       setIsReady(db.isAuthReady());
       
@@ -291,6 +299,23 @@ const App: React.FC = () => {
         />
         <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden pb-24 md:pb-8">
           <div className="max-w-7xl mx-auto">
+            {db.isImpersonating() && (
+              <div className="bg-amber-600 text-white px-6 py-3 rounded-2xl mb-8 flex items-center justify-between shadow-lg shadow-amber-100 animate-in slide-in-from-top duration-500">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🕵️</span>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest">Impersonation Active</p>
+                    <p className="text-sm font-bold opacity-90">Viewing dashboard as <span className="underline">{user.name}</span> ({user.role})</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => db.stopImpersonation()}
+                  className="bg-white text-amber-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-50 transition shadow-sm"
+                >
+                  Exit Session
+                </button>
+              </div>
+            )}
             {renderContent()}
           </div>
         </main>

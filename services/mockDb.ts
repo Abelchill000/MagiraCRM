@@ -51,6 +51,7 @@ class FirebaseDb {
   };
 
   private currentUser: User | null = null;
+  private originalAdminUser: User | null = null;
   private listeners: Set<Listener> = new Set();
   private unsubscribers: Unsubscribe[] = [];
   private authInitialized = false;
@@ -134,7 +135,27 @@ class FirebaseDb {
   isAuthReady() { return this.authInitialized; }
   getCurrentUser() { return this.currentUser; }
   getUsers() { return [...this.data.users]; }
-  
+  isImpersonating() { return !!this.originalAdminUser; }
+
+  impersonateUser(user: User) {
+    if (this.currentUser?.role !== UserRole.ADMIN && !this.originalAdminUser) return;
+    if (!this.originalAdminUser) {
+      this.originalAdminUser = this.currentUser;
+    }
+    this.currentUser = user;
+    this.initRealtimeSync();
+    this.notify();
+  }
+
+  stopImpersonation() {
+    if (this.originalAdminUser) {
+      this.currentUser = this.originalAdminUser;
+      this.originalAdminUser = null;
+      this.initRealtimeSync();
+      this.notify();
+    }
+  }
+
   getPendingUserCount() {
     return this.data.users.filter(u => u.status === 'pending').length;
   }

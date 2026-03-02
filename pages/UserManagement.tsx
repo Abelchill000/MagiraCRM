@@ -183,6 +183,17 @@ const UserManagement: React.FC = () => {
                             {u.email !== 'admin@magiracrm.store' && (
                               <>
                                 <button 
+                                  onClick={() => {
+                                    if (window.confirm(`Impersonate ${u.name}? You will see the dashboard as they do.`)) {
+                                      db.impersonateUser(u);
+                                    }
+                                  }}
+                                  className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-800 hover:text-white transition shadow-sm"
+                                  title="Impersonate User"
+                                >
+                                  👤
+                                </button>
+                                <button 
                                   onClick={() => sendWhatsAppNotification(u)}
                                   className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition shadow-sm"
                                   title="Notify via WhatsApp"
