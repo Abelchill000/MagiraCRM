@@ -5,6 +5,7 @@ import {
   Order, OrderItem, PaymentStatus, DeliveryStatus, 
   Product, UserRole, User 
 } from '../types.ts';
+import OrderCard from '../components/OrderCard';
 
 interface OrdersProps {
   user: User;
@@ -204,17 +205,6 @@ Stay Healthy, Stay Energized!`.trim();
     window.open(url, '_blank');
   };
 
-  const getStatusColor = (status: DeliveryStatus) => {
-    switch (status) {
-      case DeliveryStatus.DELIVERED: return 'bg-emerald-100 text-emerald-700';
-      case DeliveryStatus.FAILED: return 'bg-red-100 text-red-700';
-      case DeliveryStatus.CANCELLED: return 'bg-slate-200 text-slate-600';
-      case DeliveryStatus.RESCHEDULED: return 'bg-amber-100 text-amber-700';
-      case DeliveryStatus.PENDING: return 'bg-blue-100 text-blue-700';
-      default: return 'bg-slate-100 text-slate-500';
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -237,109 +227,27 @@ Stay Healthy, Stay Energized!`.trim();
         </button>
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Order Details</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Customer Info</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Pricing</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {orders.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No orders in database.</td>
-                </tr>
-              ) : (
-                orders.map(order => (
-                  <tr key={order.id} className={`hover:bg-slate-50/50 transition-all ${order.deliveryStatus === DeliveryStatus.CANCELLED ? 'opacity-50' : ''}`}>
-                    <td className="px-6 py-4">
-                      <span className="font-mono font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]">{order.id}</span>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-tighter">TRK: {order.trackingId}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-slate-800">{order.customerName}</p>
-                      <div className="flex flex-col gap-0.5 mt-0.5">
-                        <p className="text-[10px] text-slate-500 font-bold">📞 {order.phone}</p>
-                        {order.whatsapp && <p className="text-[10px] text-emerald-600 font-black">📲 {order.whatsapp}</p>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select 
-                        value={order.deliveryStatus} 
-                        onChange={(e) => handleStatusChange(order.id, e.target.value as DeliveryStatus)}
-                        className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border-none focus:ring-0 cursor-pointer ${getStatusColor(order.deliveryStatus)}`}
-                      >
-                        {Object.values(DeliveryStatus).map(s => {
-                          if (!canManageAllOrders && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
-                          return <option key={s} value={s}>{s}</option>;
-                        })}
-                      </select>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-black text-slate-800">₦{order.totalAmount.toLocaleString()}</p>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end space-x-1">
-                        <button onClick={() => setViewingOrder(order)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="View Details">👁️</button>
-                        <button onClick={() => copyReceiptText(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Copy Receipt">📄</button>
-                        <button onClick={() => shareWhatsApp(order)} className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="WhatsApp Customer">📲</button>
-                        {(canManageAllOrders) && (
-                          <button onClick={() => { if(window.confirm('Delete order?')) {} }} className="p-2 text-slate-200 hover:text-red-600 rounded-lg transition-all">🗑️</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {orders.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-3xl border-2 border-dashed border-slate-100 text-slate-400 font-medium">
-            No active orders.
+          <div className="col-span-full bg-white p-24 text-center rounded-[2.5rem] border border-slate-100 text-slate-400 font-medium">
+            <div className="flex flex-col items-center opacity-30">
+              <div className="text-5xl mb-4">📦</div>
+              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">No active orders.</p>
+            </div>
           </div>
         ) : (
           orders.map(order => (
-            <div key={order.id} className={`bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col space-y-4 ${order.deliveryStatus === DeliveryStatus.CANCELLED ? 'opacity-50' : ''}`}>
-              <div className="flex justify-between items-start">
-                <div onClick={() => setViewingOrder(order)} className="cursor-pointer">
-                  <span className="text-[10px] font-mono font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">ID: {order.id}</span>
-                  <p className="mt-2 font-black text-slate-800 text-lg flex items-center gap-2">{order.customerName} <span className="text-xs">👁️</span></p>
-                  <p className="text-xs text-slate-500 font-bold">📞 {order.phone}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-black text-slate-900">₦{order.totalAmount.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-50">
-                <select 
-                  value={order.deliveryStatus} 
-                  onChange={(e) => handleStatusChange(order.id, e.target.value as DeliveryStatus)}
-                  className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl border-none focus:ring-0 cursor-pointer w-40 ${getStatusColor(order.deliveryStatus)}`}
-                >
-                  {Object.values(DeliveryStatus).map(s => {
-                    if (!canManageAllOrders && s !== DeliveryStatus.RESCHEDULED && s !== order.deliveryStatus) return null;
-                    return <option key={s} value={s}>{s}</option>;
-                  })}
-                </select>
-
-                <div className="flex gap-2">
-                  <button onClick={() => copyReceiptText(order)} className="p-2.5 bg-slate-50 rounded-xl text-slate-500 transition">📄</button>
-                  <button onClick={() => shareWhatsApp(order)} className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 transition">📲</button>
-                </div>
-              </div>
-            </div>
+            <OrderCard 
+              key={order.id}
+              order={order}
+              onView={setViewingOrder}
+              onCopyReceipt={copyReceiptText}
+              onWhatsApp={shareWhatsApp}
+              onDelete={(id) => { if(window.confirm('Delete order?')) { db.deleteOrder(id); } }}
+              onStatusChange={handleStatusChange}
+              canManageAllOrders={canManageAllOrders}
+              states={states}
+            />
           ))
         )}
       </div>

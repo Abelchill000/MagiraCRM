@@ -282,6 +282,9 @@ class FirebaseDb {
   async deleteLead(leadId: string) {
     await deleteDoc(doc(firestore, 'leads', leadId));
   }
+  async deleteOrder(orderId: string) {
+    await deleteDoc(doc(firestore, 'orders', orderId));
+  }
   async deleteAbandonedCart(cartId: string) {
     await deleteDoc(doc(firestore, 'abandoned_carts', cartId));
   }
