@@ -86,7 +86,7 @@ const FormBuilder: React.FC = () => {
       successMessage: editingForm.successMessage || 'Thank you! Your order request has been received.',
       thankYouUrl: editingForm.thankYouUrl || '',
       createdBy: editingForm.createdBy || user.name,
-      assignedToName: editingForm.assignedToName
+      assignedToNames: editingForm.assignedToNames || []
     };
 
     await db.saveForm(form);
@@ -153,7 +153,7 @@ const FormBuilder: React.FC = () => {
   };
 
   const getEmbedCode = (form: OrderForm) => {
-    const agentName = form.assignedToName || form.createdBy;
+    const agentName = (form.assignedToNames && form.assignedToNames.length > 0) ? form.assignedToNames[0] : form.createdBy;
     const packageOptions = PACKAGES.map(pkg => 
       `<option value='{"qty":${pkg.qty}, "price":${pkg.price}}'>${pkg.label}</option>`
     ).join('\n            ');
@@ -415,15 +415,15 @@ const FormBuilder: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {forms.filter(f => user?.role === 'Admin' || f.createdBy === user?.name || f.assignedToName === user?.name).map(form => (
+        {forms.filter(f => user?.role === 'Admin' || f.createdBy === user?.name || f.assignedToNames?.includes(user?.name || '')).map(form => (
           <div key={form.id} className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col group">
             <div className="h-3" style={{ backgroundColor: form.themeColor }}></div>
             <div className="p-8 flex-1 flex flex-col">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="font-black text-slate-800 text-lg leading-tight uppercase truncate">{form.title}</h3>
-                {form.assignedToName && (
+                {form.assignedToNames && form.assignedToNames.length > 0 && (
                   <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg uppercase tracking-widest">
-                    Assigned to: {form.assignedToName}
+                    Assigned to: {form.assignedToNames.length} Agents
                   </span>
                 )}
               </div>
@@ -458,16 +458,33 @@ const FormBuilder: React.FC = () => {
                 </div>
                 {user?.role === 'Admin' && (
                   <div className="mt-2 border-t border-slate-50 pt-2">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {(form.assignedToNames || []).map(name => (
+                        <span key={name} className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1">
+                          {name}
+                          <button 
+                            onClick={async () => {
+                              const updatedNames = (form.assignedToNames || []).filter(n => n !== name);
+                              await db.saveForm({ ...form, assignedToNames: updatedNames });
+                            }}
+                            className="hover:text-red-500"
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
                     <select 
                       className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-500 focus:ring-1 focus:ring-emerald-500"
-                      value={form.assignedToName || ''}
+                      value=""
                       onChange={async (e) => {
-                        const updatedForm = { ...form, assignedToName: e.target.value };
-                        await db.saveForm(updatedForm);
-                        setForms(db.getForms());
+                        if (!e.target.value) return;
+                        const currentNames = form.assignedToNames || [];
+                        if (!currentNames.includes(e.target.value)) {
+                          const updatedForm = { ...form, assignedToNames: [...currentNames, e.target.value] };
+                          await db.saveForm(updatedForm);
+                        }
                       }}
                     >
-                      <option value="">Quick Assign Agent...</option>
+                      <option value="">+ Add Agent...</option>
                       {users.map(u => (
                         <option key={u.id} value={u.name}>{u.name}</option>
                       ))}
@@ -533,18 +550,38 @@ const FormBuilder: React.FC = () => {
 
                 {user?.role === 'Admin' && (
                   <div className="pt-6 border-t border-slate-200">
-                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Assign to Agent</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Assigned Agents</label>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {(editingForm?.assignedToNames || []).map(name => (
+                        <span key={name} className="bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase flex items-center gap-2">
+                          {name}
+                          <button 
+                            onClick={() => {
+                              const updated = (editingForm?.assignedToNames || []).filter(n => n !== name);
+                              setEditingForm({...editingForm, assignedToNames: updated});
+                            }}
+                            className="hover:text-red-500"
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
                     <select 
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
-                      value={editingForm?.assignedToName || ''}
-                      onChange={e => setEditingForm({...editingForm, assignedToName: e.target.value})}
+                      value=""
+                      onChange={e => {
+                        if (!e.target.value) return;
+                        const current = editingForm?.assignedToNames || [];
+                        if (!current.includes(e.target.value)) {
+                          setEditingForm({...editingForm, assignedToNames: [...current, e.target.value]});
+                        }
+                      }}
                     >
-                      <option value="">-- No Assignment --</option>
+                      <option value="">-- Add Agent --</option>
                       {users.map(u => (
                         <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
                       ))}
                     </select>
-                    <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">When assigned, leads captured by this form will automatically belong to this agent.</p>
+                    <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">Assigned agents can view this form and its leads in their dashboard.</p>
                   </div>
                 )}
               </div>
