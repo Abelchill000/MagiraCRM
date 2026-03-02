@@ -285,8 +285,14 @@ class FirebaseDb {
   async deleteOrder(orderId: string) {
     await deleteDoc(doc(firestore, 'orders', orderId));
   }
+  async updateOrder(orderId: string, updates: Partial<Order>) {
+    await updateDoc(doc(firestore, 'orders', orderId), updates as any);
+  }
   async deleteAbandonedCart(cartId: string) {
     await deleteDoc(doc(firestore, 'abandoned_carts', cartId));
+  }
+  async updateLead(leadId: string, updates: Partial<WebLead>) {
+    await updateDoc(doc(firestore, 'leads', leadId), updates as any);
   }
   async updateLeadStatus(leadId: string, status: LeadStatus, notes?: string) {
     const updates: any = { status };

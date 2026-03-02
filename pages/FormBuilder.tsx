@@ -589,14 +589,54 @@ const FormBuilder: React.FC = () => {
 
             <div className="flex-1 flex flex-col bg-slate-100/30 p-8 overflow-y-auto">
                <div className="max-w-2xl mx-auto w-full space-y-6">
-                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Campaign Identity</label>
-                     <input 
-                        className="w-full text-2xl font-black border-none p-0 focus:ring-0 placeholder-slate-200 uppercase"
-                        placeholder="Page Name..."
-                        value={editingForm?.title || ''}
-                        onChange={e => setEditingForm({...editingForm, title: e.target.value})}
-                     />
+                  <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                     <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Campaign Identity</label>
+                        <input 
+                            className="w-full text-2xl font-black border-none p-0 focus:ring-0 placeholder-slate-200 uppercase"
+                            placeholder="Page Name..."
+                            value={editingForm?.title || ''}
+                            onChange={e => setEditingForm({...editingForm, title: e.target.value})}
+                        />
+                        <textarea 
+                            className="w-full text-sm font-medium border-none p-0 focus:ring-0 placeholder-slate-300 mt-2 resize-none"
+                            placeholder="Brief description of this campaign..."
+                            rows={2}
+                            value={editingForm?.description || ''}
+                            onChange={e => setEditingForm({...editingForm, description: e.target.value})}
+                        />
+                     </div>
+                     
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-50">
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Submit Button Text</label>
+                            <input 
+                                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
+                                placeholder="e.g. Place Order Now"
+                                value={editingForm?.submitButtonText || ''}
+                                onChange={e => setEditingForm({...editingForm, submitButtonText: e.target.value})}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Thank You Redirect URL (Optional)</label>
+                            <input 
+                                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
+                                placeholder="https://..."
+                                value={editingForm?.thankYouUrl || ''}
+                                onChange={e => setEditingForm({...editingForm, thankYouUrl: e.target.value})}
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Success Message</label>
+                            <textarea 
+                                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
+                                placeholder="What users see after submitting..."
+                                rows={2}
+                                value={editingForm?.successMessage || ''}
+                                onChange={e => setEditingForm({...editingForm, successMessage: e.target.value})}
+                            />
+                        </div>
+                     </div>
                   </div>
                   <div className="space-y-4">
                     {(editingForm?.sections || []).map((section, idx) => (
@@ -620,12 +660,12 @@ const FormBuilder: React.FC = () => {
                               <button onClick={() => removeSection(section.id)} className="p-1.5 hover:bg-red-50 rounded text-red-400 ml-2">✕</button>
                            </div>
                         </div>
-                        {['HEADER', 'BENEFITS', 'TESTIMONIALS', 'IMAGE'].includes(section.type) && (
+                        {['HEADER', 'BENEFITS', 'TESTIMONIALS', 'IMAGE', 'FAQ', 'CUSTOM_TEXT', 'DELIVERY_INSTRUCTIONS'].includes(section.type) && (
                           <textarea className="w-full text-sm bg-slate-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 font-medium" rows={2} value={section.content || ''} onChange={e => {
                             const updated = [...(editingForm?.sections || [])];
                             updated[idx].content = e.target.value;
                             setEditingForm({...editingForm, sections: updated});
-                          }}/>
+                          }} placeholder={`Enter ${section.type.toLowerCase()} content...`}/>
                         )}
                       </div>
                     ))}

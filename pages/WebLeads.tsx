@@ -14,6 +14,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [products] = useState(db.getProducts());
   const [selectedLead, setSelectedLead] = useState<WebLead | null>(null);
   const [viewingLead, setViewingLead] = useState<WebLead | null>(null);
+  const [isEditingLead, setIsEditingLead] = useState(false);
+  const [editingLeadData, setEditingLeadData] = useState<Partial<WebLead>>({});
   const [showConvertModal, setShowConvertModal] = useState(false);
   
   const [showLogisticsPrompt, setShowLogisticsPrompt] = useState<{orderId: string, leadId: string} | null>(null);
@@ -160,6 +162,18 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     }
   };
 
+  const handleSaveLeadEdit = async () => {
+    if (!viewingLead) return;
+    try {
+      await db.updateLead(viewingLead.id, editingLeadData);
+      setViewingLead({ ...viewingLead, ...editingLeadData } as WebLead);
+      setIsEditingLead(false);
+      alert("Lead updated successfully!");
+    } catch (err) {
+      alert("Failed to update lead.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -217,14 +231,44 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
           <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Customer Application Profile</h2>
-              <button onClick={() => setViewingLead(null)} className="text-slate-400 hover:text-slate-600 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">✕</button>
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">
+                {isEditingLead ? 'Edit Customer Profile' : 'Customer Application Profile'}
+              </h2>
+              <div className="flex items-center gap-2">
+                {isAdmin && !isEditingLead && (
+                  <button 
+                    onClick={() => {
+                      setIsEditingLead(true);
+                      setEditingLeadData({
+                        customerName: viewingLead.customerName,
+                        phone: viewingLead.phone,
+                        whatsapp: viewingLead.whatsapp,
+                        address: viewingLead.address,
+                        deliveryInstructions: viewingLead.deliveryInstructions,
+                        stateId: viewingLead.stateId
+                      });
+                    }}
+                    className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-emerald-100 transition"
+                  >
+                    Edit Data
+                  </button>
+                )}
+                <button onClick={() => { setViewingLead(null); setIsEditingLead(false); }} className="text-slate-400 hover:text-slate-600 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">✕</button>
+              </div>
             </div>
             <div className="p-10 space-y-8 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Full Name</label>
-                  <p className="text-lg font-black text-slate-900">{viewingLead.customerName}</p>
+                  {isEditingLead ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingLeadData.customerName || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, customerName: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-lg font-black text-slate-900">{viewingLead.customerName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Lead Status</label>
@@ -234,27 +278,72 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Primary Contact</label>
-                  <p className="text-lg font-black text-slate-900">{viewingLead.phone}</p>
+                  {isEditingLead ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingLeadData.phone || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, phone: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-lg font-black text-slate-900">{viewingLead.phone}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">WhatsApp</label>
-                  <p className="text-lg font-black text-emerald-600">{viewingLead.whatsapp || 'Not Provided'}</p>
+                  {isEditingLead ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingLeadData.whatsapp || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, whatsapp: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-lg font-black text-emerald-600">{viewingLead.whatsapp || 'Not Provided'}</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Location Hub</label>
-                  <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                    {states.find(s => s.id === viewingLead.stateId || s.name === viewingLead.stateId)?.name || viewingLead.stateId || 'Not Assigned / Global'}
-                  </p>
+                  {isEditingLead ? (
+                    <select 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingLeadData.stateId || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, stateId: e.target.value})}
+                    >
+                      <option value="">-- Choose State Hub --</option>
+                      {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
+                      {states.find(s => s.id === viewingLead.stateId || s.name === viewingLead.stateId)?.name || viewingLead.stateId || 'Not Assigned / Global'}
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Address</label>
-                  <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingLead.address}"</p>
+                  {isEditingLead ? (
+                    <textarea 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 resize-none"
+                      rows={3}
+                      value={editingLeadData.address || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, address: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingLead.address}"</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Special Instructions</label>
-                  <p className="text-sm font-medium text-slate-500 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">
-                    {viewingLead.deliveryInstructions || 'No specific instructions added by customer.'}
-                  </p>
+                  {isEditingLead ? (
+                    <textarea 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 resize-none"
+                      rows={3}
+                      value={editingLeadData.deliveryInstructions || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, deliveryInstructions: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-sm font-medium text-slate-500 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">
+                      {viewingLead.deliveryInstructions || 'No specific instructions added by customer.'}
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Selection Metadata</label>
@@ -268,12 +357,29 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                 </div>
               </div>
               <div className="pt-6 border-t border-slate-100">
-                <button 
-                  onClick={() => { copyLeadDetails(viewingLead); setViewingLead(null); }}
-                  className="w-full bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-black transition shadow-xl"
-                >
-                  Copy & Close
-                </button>
+                {isEditingLead ? (
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={handleSaveLeadEdit}
+                      className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl"
+                    >
+                      Save Changes
+                    </button>
+                    <button 
+                      onClick={() => setIsEditingLead(false)}
+                      className="flex-1 bg-slate-100 text-slate-600 py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-slate-200 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => { copyLeadDetails(viewingLead); setViewingLead(null); }}
+                    className="w-full bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-black transition shadow-xl"
+                  >
+                    Copy & Close
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -17,6 +17,8 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   const [states] = useState(db.getStates());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editingOrderData, setEditingOrderData] = useState<Partial<Order>>({});
   
   const [showLogisticsPrompt, setShowLogisticsPrompt] = useState<{orderId: string, status: DeliveryStatus} | null>(null);
   const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
@@ -205,6 +207,18 @@ Stay Healthy, Stay Energized!`.trim();
     window.open(url, '_blank');
   };
 
+  const handleSaveOrderEdit = async () => {
+    if (!viewingOrder) return;
+    try {
+      await db.updateOrder(viewingOrder.id, editingOrderData);
+      setViewingOrder({ ...viewingOrder, ...editingOrderData } as Order);
+      setIsEditingOrder(false);
+      alert("Order updated successfully!");
+    } catch (err) {
+      alert("Failed to update order.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -257,42 +271,126 @@ Stay Healthy, Stay Energized!`.trim();
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
           <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Order Fulfillment Profile</h2>
-              <button onClick={() => setViewingOrder(null)} className="text-slate-400 hover:text-slate-600 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">✕</button>
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">
+                {isEditingOrder ? 'Edit Order Profile' : 'Order Fulfillment Profile'}
+              </h2>
+              <div className="flex items-center gap-2">
+                {isAdmin && !isEditingOrder && (
+                  <button 
+                    onClick={() => {
+                      setIsEditingOrder(true);
+                      setEditingOrderData({
+                        customerName: viewingOrder.customerName,
+                        phone: viewingOrder.phone,
+                        whatsapp: viewingOrder.whatsapp,
+                        address: viewingOrder.address,
+                        deliveryInstructions: viewingOrder.deliveryInstructions,
+                        stateId: viewingOrder.stateId,
+                        trackingId: viewingOrder.trackingId
+                      });
+                    }}
+                    className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-emerald-100 transition"
+                  >
+                    Edit Data
+                  </button>
+                )}
+                <button onClick={() => { setViewingOrder(null); setIsEditingOrder(false); }} className="text-slate-400 hover:text-slate-600 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm">✕</button>
+              </div>
             </div>
             <div className="p-10 space-y-8 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Customer Name</label>
-                  <p className="text-lg font-black text-slate-900">{viewingOrder.customerName}</p>
+                  {isEditingOrder ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingOrderData.customerName || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, customerName: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-lg font-black text-slate-900">{viewingOrder.customerName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tracking ID</label>
-                  <p className="text-xs font-mono font-black text-emerald-600 tracking-wider uppercase">{viewingOrder.trackingId}</p>
+                  {isEditingOrder ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingOrderData.trackingId || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, trackingId: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-xs font-mono font-black text-emerald-600 tracking-wider uppercase">{viewingOrder.trackingId}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Contact Phone</label>
-                  <p className="text-lg font-black text-slate-900">{viewingOrder.phone}</p>
+                  {isEditingOrder ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingOrderData.phone || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, phone: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-lg font-black text-slate-900">{viewingOrder.phone}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">WhatsApp Hub</label>
-                  <p className="text-lg font-black text-emerald-600">{viewingOrder.whatsapp || 'N/A'}</p>
+                  {isEditingOrder ? (
+                    <input 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingOrderData.whatsapp || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, whatsapp: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-lg font-black text-emerald-600">{viewingOrder.whatsapp || 'N/A'}</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Hub / State</label>
-                  <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                    {states.find(s => s.id === viewingOrder.stateId || s.name === viewingOrder.stateId)?.name || viewingOrder.stateId || 'General Network'}
-                  </p>
+                  {isEditingOrder ? (
+                    <select 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                      value={editingOrderData.stateId || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, stateId: e.target.value})}
+                    >
+                      <option value="">-- Choose State Hub --</option>
+                      {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
+                      {states.find(s => s.id === viewingOrder.stateId || s.name === viewingOrder.stateId)?.name || viewingOrder.stateId || 'General Network'}
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Full Physical Address</label>
-                  <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingOrder.address}"</p>
+                  {isEditingOrder ? (
+                    <textarea 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 resize-none"
+                      rows={3}
+                      value={editingOrderData.address || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, address: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingOrder.address}"</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Directives</label>
-                  <p className="text-sm font-medium text-slate-500 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">
-                    {viewingOrder.deliveryInstructions || 'No custom directives provided.'}
-                  </p>
+                  {isEditingOrder ? (
+                    <textarea 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 resize-none"
+                      rows={3}
+                      value={editingOrderData.deliveryInstructions || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, deliveryInstructions: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-sm font-medium text-slate-500 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">
+                      {viewingOrder.deliveryInstructions || 'No custom directives provided.'}
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Package Details</label>
@@ -311,18 +409,37 @@ Stay Healthy, Stay Energized!`.trim();
                 </div>
               </div>
               <div className="pt-6 border-t border-slate-100 flex gap-4">
-                <button 
-                  onClick={() => { copyReceiptText(viewingOrder); }}
-                  className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl"
-                >
-                  Copy Receipt
-                </button>
-                <button 
-                  onClick={() => { shareWhatsApp(viewingOrder); }}
-                  className="flex-1 bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-black transition shadow-xl"
-                >
-                  WhatsApp
-                </button>
+                {isEditingOrder ? (
+                  <>
+                    <button 
+                      onClick={handleSaveOrderEdit}
+                      className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl"
+                    >
+                      Save Changes
+                    </button>
+                    <button 
+                      onClick={() => setIsEditingOrder(false)}
+                      className="flex-1 bg-slate-100 text-slate-600 py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-slate-200 transition"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => { copyReceiptText(viewingOrder); }}
+                      className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl"
+                    >
+                      Copy Receipt
+                    </button>
+                    <button 
+                      onClick={() => { shareWhatsApp(viewingOrder); }}
+                      className="flex-1 bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-black transition shadow-xl"
+                    >
+                      WhatsApp
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
