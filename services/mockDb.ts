@@ -104,7 +104,10 @@ class FirebaseDb {
 
     collectionsToSync.forEach(colName => {
       try {
-        const key = colName === 'abandoned_carts' ? 'abandoned' : colName;
+        let key = colName;
+        if (colName === 'abandoned_carts') key = 'abandoned';
+        if (colName === 'ads_budgets') key = 'budgets';
+        
         const unsub = onSnapshot(
           collection(firestore, colName), 
           (snapshot) => {
