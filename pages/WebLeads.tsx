@@ -192,7 +192,11 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               key={lead.id}
               lead={lead}
               onView={setViewingLead}
-              onConvert={(l) => { setSelectedLead(l); setShowConvertModal(true); }}
+              onConvert={(l) => { 
+                setSelectedLead(l); 
+                setConvDetails(prev => ({ ...prev, stateId: l.stateId || '' }));
+                setShowConvertModal(true); 
+              }}
               onDelete={handleDeleteLead}
               onCopy={copyLeadDetails}
               onUpdateStatus={updateStatus}
@@ -239,7 +243,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Location Hub</label>
                   <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                    {states.find(s => s.id === viewingLead.stateId || s.name === viewingLead.stateId)?.name || 'Not Assigned / Global'}
+                    {states.find(s => s.id === viewingLead.stateId || s.name === viewingLead.stateId)?.name || viewingLead.stateId || 'Not Assigned / Global'}
                   </p>
                 </div>
                 <div className="md:col-span-2">

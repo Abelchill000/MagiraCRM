@@ -136,6 +136,7 @@ const FormBuilder: React.FC = () => {
       whatsapp: previewData.whatsapp,
       address: previewData.address,
       deliveryInstructions: previewData.deliveryInstructions,
+      stateId: previewData.state,
       items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }],
       status: LeadStatus.NEW,
       notes: `Captured from LIVE PREVIEW by ${user.name}`,
@@ -231,6 +232,7 @@ const FormBuilder: React.FC = () => {
         whatsapp: rawData.whatsapp || '',
         address: rawData.address || '',
         deliveryInstructions: rawData.deliveryInstructions || '',
+        stateId: rawData.stateName || '',
         agentName: agentName,
         status: 'abandoned',
         lastUpdatedAt: new Date().toISOString(),
@@ -252,6 +254,7 @@ const FormBuilder: React.FC = () => {
             whatsapp: { stringValue: payload.whatsapp },
             address: { stringValue: payload.address },
             deliveryInstructions: { stringValue: payload.deliveryInstructions },
+            stateId: { stringValue: payload.stateId || '' },
             agentName: { stringValue: payload.agentName },
             status: { stringValue: payload.status },
             lastUpdatedAt: { stringValue: payload.lastUpdatedAt },
@@ -294,6 +297,7 @@ const FormBuilder: React.FC = () => {
       whatsapp: rawData.whatsapp || '',
       address: rawData.address,
       deliveryInstructions: rawData.deliveryInstructions || '',
+      stateId: rawData.stateName || '',
       status: 'New Lead',
       notes: 'Captured via Landing Page by ' + agentName,
       createdAt: new Date().toISOString(),
@@ -315,6 +319,7 @@ const FormBuilder: React.FC = () => {
             whatsapp: { stringValue: payload.whatsapp },
             address: { stringValue: payload.address },
             deliveryInstructions: { stringValue: payload.deliveryInstructions },
+            stateId: { stringValue: payload.stateId || '' },
             status: { stringValue: payload.status },
             notes: { stringValue: payload.notes },
             createdAt: { stringValue: payload.createdAt },
@@ -642,6 +647,15 @@ const FormBuilder: React.FC = () => {
                               <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <textarea required placeholder="Address..." className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={3} value={previewData.address} onChange={e => setPreviewData({...previewData, address: e.target.value})} />
+                              </div>
+                            );
+                            case 'LOCATION': return (
+                              <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
+                                <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.state} onChange={e => setPreviewData({...previewData, state: e.target.value})}>
+                                  <option value="">-- Select State --</option>
+                                  {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
                               </div>
                             );
                             default: return null;

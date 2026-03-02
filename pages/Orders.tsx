@@ -281,7 +281,7 @@ Stay Healthy, Stay Energized!`.trim();
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Hub / State</label>
                   <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                    {states.find(s => s.id === viewingOrder.stateId || s.name === viewingOrder.stateId)?.name || 'General Network'}
+                    {states.find(s => s.id === viewingOrder.stateId || s.name === viewingOrder.stateId)?.name || viewingOrder.stateId || 'General Network'}
                   </p>
                 </div>
                 <div className="md:col-span-2">

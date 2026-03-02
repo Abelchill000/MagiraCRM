@@ -41,7 +41,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
     }
   };
 
-  const stateName = states.find(s => s.id === order.stateId || s.name === order.stateId)?.name || 'General Network';
+  const stateName = states.find(s => s.id === order.stateId || s.name === order.stateId)?.name || order.stateId || 'General Network';
 
   return (
     <motion.div 

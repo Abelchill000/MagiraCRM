@@ -56,7 +56,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
     }
   };
 
-  const stateName = states.find(s => s.id === lead.stateId || s.name === lead.stateId)?.name || 'Not Assigned';
+  const stateName = states.find(s => s.id === lead.stateId || s.name === lead.stateId)?.name || lead.stateId || 'Not Assigned';
 
   return (
     <motion.div 
