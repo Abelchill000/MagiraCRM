@@ -56,6 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     },
     { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN] },
     { id: 'whatsapp', label: 'WhatsApp Hub', icon: '📱', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT] },
+    { id: 'adsbudget', label: 'Ads Budget', icon: '💰', roles: [UserRole.ADMIN, UserRole.STATE_MANAGER, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
     { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
   ];
 

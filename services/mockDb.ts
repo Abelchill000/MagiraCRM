@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { 
   Product, State, LogisticsPartner, Order, User, UserRole, 
-  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart 
+  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget 
 } from '../types';
 
 const firebaseConfig = {
@@ -39,6 +39,7 @@ class FirebaseDb {
     leads: WebLead[];
     users: User[];
     abandoned: AbandonedCart[];
+    budgets: AdsBudget[];
   } = {
     products: [],
     states: [],
@@ -47,7 +48,8 @@ class FirebaseDb {
     forms: [],
     leads: [],
     users: [],
-    abandoned: []
+    abandoned: [],
+    budgets: []
   };
 
   private currentUser: User | null = null;
@@ -94,7 +96,7 @@ class FirebaseDb {
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
-    const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts'];
+    const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets'];
     
     if (isAdmin) {
       collectionsToSync.push('users');
@@ -236,6 +238,7 @@ class FirebaseDb {
   getForms() { return [...this.data.forms]; }
   getLeads() { return [...this.data.leads]; }
   getAbandonedCarts() { return [...this.data.abandoned]; }
+  getBudgets() { return [...this.data.budgets]; }
 
   async saveProduct(product: Product) {
     const { id, ...rest } = product;
@@ -264,6 +267,10 @@ class FirebaseDb {
   async saveForm(form: OrderForm) {
     const { id, ...rest } = form;
     await setDoc(doc(firestore, 'forms', id), rest);
+  }
+  async saveBudget(budget: AdsBudget) {
+    const { id, ...rest } = budget;
+    await setDoc(doc(firestore, 'ads_budgets', id), rest);
   }
   async createLead(lead: WebLead) {
     const { id, ...rest } = lead;

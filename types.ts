@@ -156,3 +156,12 @@ export interface User {
   status: 'pending' | 'approved' | 'rejected';
   registeredAt: string;
 }
+
+export interface AdsBudget {
+  id: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  createdAt: string;
+}

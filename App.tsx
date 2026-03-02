@@ -15,6 +15,7 @@ import WebLeads from './pages/WebLeads.tsx';
 import AbandonedCarts from './pages/AbandonedCarts.tsx';
 import UserManagement from './pages/UserManagement.tsx';
 import DatabaseExplorer from './pages/DatabaseExplorer.tsx';
+import AdsBudgetPage from './pages/AdsBudget.tsx';
 
 // Components
 import Sidebar from './components/Sidebar.tsx';
@@ -272,6 +273,7 @@ const App: React.FC = () => {
       case 'formbuilder': return <FormBuilder />;
       case 'leads': return <WebLeads userRole={user.role} />;
       case 'abandoned': return <AbandonedCarts userRole={user.role} />;
+      case 'adsbudget': return <AdsBudgetPage />;
       case 'users': return <UserManagement />;
       case 'database': return <DatabaseExplorer />;
       default: return <Dashboard />;

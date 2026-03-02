@@ -12,6 +12,7 @@ const Dashboard: React.FC = () => {
   const [orders, setOrders] = React.useState(db.getOrders());
   const [products, setProducts] = React.useState(db.getProducts());
   const [leads, setLeads] = React.useState(db.getLeads());
+  const [budgets, setBudgets] = React.useState(db.getBudgets());
 
   const isAdmin = user?.role === UserRole.ADMIN;
   // Special access emails
@@ -32,6 +33,7 @@ const Dashboard: React.FC = () => {
       setOrders(db.getOrders());
       setProducts(db.getProducts());
       setLeads(db.getLeads());
+      setBudgets(db.getBudgets());
     });
     return unsub;
   }, []);
@@ -90,6 +92,10 @@ const Dashboard: React.FC = () => {
       o.reminderEnabled
     );
 
+    const filteredBudgets = isAdmin ? budgets : budgets.filter(b => b.userId === user?.id);
+    const adsToday = filteredBudgets.filter(b => b.date === today).reduce((acc, b) => acc + b.amount, 0);
+    const totalAdsSpend = filteredBudgets.reduce((acc, b) => acc + b.amount, 0);
+
     return { 
       salesToday, 
       realizedRevenue, 
@@ -102,9 +108,11 @@ const Dashboard: React.FC = () => {
       leadsToday,
       conversionRate,
       leadPipeline,
-      remindersToday
+      remindersToday,
+      adsToday,
+      totalAdsSpend
     };
-  }, [filteredOrders, filteredLeads, products]);
+  }, [filteredOrders, filteredLeads, products, budgets, isAdmin, user?.id]);
 
   const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 
@@ -147,6 +155,33 @@ const Dashboard: React.FC = () => {
           <p className="text-sm font-medium text-slate-500">Web Leads Today</p>
           <p className="text-2xl font-bold text-blue-600 mt-1">{stats.leadsToday}</p>
           <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase">Conversion: {stats.conversionRate.toFixed(1)}%</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <p className="text-sm font-medium text-slate-500">Ads Budget Today</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">₦{stats.adsToday.toLocaleString()}</p>
+          <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase">Daily Meta Allocation</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <p className="text-sm font-medium text-slate-500">Total Ads Spend</p>
+          <p className="text-2xl font-bold text-slate-800 mt-1">₦{stats.totalAdsSpend.toLocaleString()}</p>
+          <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase">Cumulative Budget</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <p className="text-sm font-medium text-slate-500">ROAS (Estimated)</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">
+            {stats.totalAdsSpend > 0 ? (stats.realizedRevenue / stats.totalAdsSpend).toFixed(2) : '0.00'}x
+          </p>
+          <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase">Revenue / Ads Spend</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <p className="text-sm font-medium text-slate-500">CPL (Cost Per Lead)</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">
+            ₦{filteredLeads.length > 0 ? (stats.totalAdsSpend / filteredLeads.length).toFixed(0) : '0'}
+          </p>
+          <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase">Ads Spend / Total Leads</p>
         </div>
       </div>
 
