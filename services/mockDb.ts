@@ -271,6 +271,9 @@ class FirebaseDb {
     const { id, ...rest } = form;
     await setDoc(doc(firestore, 'forms', id), rest);
   }
+  async deleteForm(formId: string) {
+    await deleteDoc(doc(firestore, 'forms', formId));
+  }
   async saveBudget(budget: AdsBudget) {
     const { id, ...rest } = budget;
     await setDoc(doc(firestore, 'ads_budgets', id), rest);

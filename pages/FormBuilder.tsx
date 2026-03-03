@@ -34,7 +34,7 @@ const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
     label: 'Your Delivery State',
     options: NIGERIA_STATES.map(s => ({ label: s, value: s }))
   },
-  ADDRESS: { label: 'Street Address' },
+  ADDRESS: { label: 'Street Address', content: 'Full Delivery Address' },
   DELIVERY_INSTRUCTIONS: { label: 'Delivery Instructions', content: 'e.g. Leave at the gate, Call before arrival, etc.' },
   CUSTOM_TEXT: { label: 'Special Instructions', content: 'Delivery takes 24-48 hours.' },
   BENEFITS: { label: 'Why Choose Magira?', content: '100% Organic\nNo Preservatives\nInstant Energy\nRich in Vitamin C' },
@@ -227,7 +227,7 @@ const FormBuilder: React.FC = () => {
         case 'LOCATION':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="stateName" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px;"><option value="">-- Select State --</option>${stateOptions}</select></div>`;
         case 'ADDRESS':
-          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="Full Delivery Address" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="${sec.content || 'Full Delivery Address'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'DELIVERY_INSTRUCTIONS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="deliveryInstructions" rows="2" placeholder="${sec.content || 'Add specific instructions for the delivery agent...'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'BENEFITS':
@@ -511,6 +511,18 @@ const FormBuilder: React.FC = () => {
                   </button>
                 </div>
                 {user?.role === 'Admin' && (
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to delete this form? This cannot be undone.')) {
+                        await db.deleteForm(form.id);
+                      }
+                    }}
+                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition border border-red-100"
+                  >
+                    Delete Form
+                  </button>
+                )}
+                {user?.role === 'Admin' && (
                   <div className="mt-2 border-t border-slate-50 pt-2">
                     <div className="flex flex-wrap gap-1 mb-2">
                       {(form.assignedToNames || []).map(name => (
@@ -589,7 +601,7 @@ const FormBuilder: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Essentials</p>
                   <div className="grid grid-cols-1 gap-2">
-                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS', 'DELIVERY_INSTRUCTIONS'] as SectionType[]).map(type => (
+                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS', 'DELIVERY_INSTRUCTIONS', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ'] as SectionType[]).map(type => (
                       <button key={type} onClick={() => addSection(type)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-left hover:border-emerald-500 transition-all flex items-center gap-3 group">
                         <span className="bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{type.replace('_', ' ')}</span>
@@ -714,7 +726,7 @@ const FormBuilder: React.FC = () => {
                               <button onClick={() => removeSection(section.id)} className="p-1.5 hover:bg-red-50 rounded text-red-400 ml-2">✕</button>
                            </div>
                         </div>
-                        {['HEADER', 'BENEFITS', 'TESTIMONIALS', 'IMAGE', 'FAQ', 'CUSTOM_TEXT', 'DELIVERY_INSTRUCTIONS'].includes(section.type) && (
+                        {['HEADER', 'BENEFITS', 'TESTIMONIALS', 'IMAGE', 'FAQ', 'CUSTOM_TEXT', 'DELIVERY_INSTRUCTIONS', 'ADDRESS'].includes(section.type) && (
                           <textarea className="w-full text-sm bg-slate-50 border-none rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 font-medium" rows={2} value={section.content || ''} onChange={e => {
                             const updated = [...(editingForm?.sections || [])];
                             updated[idx].content = e.target.value;
@@ -839,7 +851,7 @@ const FormBuilder: React.FC = () => {
                             case 'ADDRESS': return (
                               <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
-                                <textarea required placeholder="Address..." className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={3} value={previewData.address} onChange={e => setPreviewData({...previewData, address: e.target.value})} />
+                                <textarea required placeholder={sec.content || "Address..."} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={3} value={previewData.address} onChange={e => setPreviewData({...previewData, address: e.target.value})} />
                               </div>
                             );
                             case 'LOCATION': return (
@@ -849,6 +861,42 @@ const FormBuilder: React.FC = () => {
                                   <option value="">-- Select State --</option>
                                   {(sec.options || NIGERIA_STATES.map(s => ({ label: s, value: s }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
                                 </select>
+                              </div>
+                            );
+                            case 'DELIVERY_INSTRUCTIONS': return (
+                              <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
+                                <textarea placeholder={sec.content} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={2} value={previewData.deliveryInstructions} onChange={e => setPreviewData({...previewData, deliveryInstructions: e.target.value})} />
+                              </div>
+                            );
+                            case 'BENEFITS': return (
+                              <div key={sec.id} className="px-10 py-8 bg-slate-50 mx-10 my-4 rounded-3xl">
+                                <h3 className="text-sm font-black text-slate-800 mb-4 uppercase tracking-widest">{sec.label}</h3>
+                                <ul className="space-y-3">
+                                  {(sec.content || '').split('\n').map((b, i) => (
+                                    <li key={i} className="flex items-start gap-3 text-sm font-medium text-slate-600">
+                                      <span style={{ color: previewForm.themeColor }}>✓</span> {b.trim()}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                            case 'TESTIMONIALS': return (
+                              <div key={sec.id} className="px-10 py-8 border-2 border-slate-50 mx-10 my-4 rounded-3xl">
+                                <p className="text-sm font-medium text-slate-600 italic leading-relaxed">"{sec.content}"</p>
+                                <p className="text-xs font-black text-slate-800 mt-4 uppercase tracking-widest">— {sec.label}</p>
+                              </div>
+                            );
+                            case 'FAQ': return (
+                              <div key={sec.id} className="px-10 py-8">
+                                <h3 className="text-sm font-black text-slate-800 mb-2 uppercase tracking-widest">Q: {sec.label}</h3>
+                                <p className="text-sm font-medium text-slate-500 leading-relaxed">A: {sec.content}</p>
+                              </div>
+                            );
+                            case 'CUSTOM_TEXT': return (
+                              <div key={sec.id} className="px-10 py-8">
+                                <h3 className="text-sm font-black text-slate-800 mb-2 uppercase tracking-widest">{sec.label}</h3>
+                                <p className="text-sm font-medium text-slate-500 leading-relaxed">{sec.content}</p>
                               </div>
                             );
                             default: return null;
