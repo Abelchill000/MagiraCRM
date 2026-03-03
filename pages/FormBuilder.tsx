@@ -3,20 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb';
 import { OrderForm, Product, State, FormSection, SectionType, WebLead, LeadStatus, User } from '../types';
 
-const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
-  HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
-  CONTACT: { label: 'Enter Shipping Info' },
-  PRODUCTS: { label: 'Choose Your Package' },
-  LOCATION: { label: 'Your Delivery State' },
-  ADDRESS: { label: 'Street Address' },
-  DELIVERY_INSTRUCTIONS: { label: 'Delivery Instructions', content: 'e.g. Leave at the gate, Call before arrival, etc.' },
-  CUSTOM_TEXT: { label: 'Special Instructions', content: 'Delivery takes 24-48 hours.' },
-  BENEFITS: { label: 'Why Choose Magira?', content: '100% Organic\nNo Preservatives\nInstant Energy\nRich in Vitamin C' },
-  TESTIMONIALS: { label: 'Adebayo M.', content: '"The best ginger shot in Lagos. I feel energized all day!"' },
-  FAQ: { label: 'Is it safe for kids?', content: 'Yes, our ginger shots are made from 100% natural ginger and lemon.' },
-  IMAGE: { label: 'Banner Image', content: 'https://images.unsplash.com/photo-1622484211148-71629844865c?q=80&w=800' },
-};
-
 const PACKAGES = [
   { label: '1 BOTTLE of 500ml @ ₦20,000', qty: 1, price: 20000 },
   { label: '2 BOTTLES of 500ml @ ₦38,000', qty: 2, price: 38000 },
@@ -36,6 +22,26 @@ const NIGERIA_STATES = [
   "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", 
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT Abuja"
 ];
+
+const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
+  HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
+  CONTACT: { label: 'Enter Shipping Info' },
+  PRODUCTS: { 
+    label: 'Choose Your Package',
+    options: PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }), price: p.price, qty: p.qty }))
+  },
+  LOCATION: { 
+    label: 'Your Delivery State',
+    options: NIGERIA_STATES.map(s => ({ label: s, value: s }))
+  },
+  ADDRESS: { label: 'Street Address' },
+  DELIVERY_INSTRUCTIONS: { label: 'Delivery Instructions', content: 'e.g. Leave at the gate, Call before arrival, etc.' },
+  CUSTOM_TEXT: { label: 'Special Instructions', content: 'Delivery takes 24-48 hours.' },
+  BENEFITS: { label: 'Why Choose Magira?', content: '100% Organic\nNo Preservatives\nInstant Energy\nRich in Vitamin C' },
+  TESTIMONIALS: { label: 'Adebayo M.', content: '"The best ginger shot in Lagos. I feel energized all day!"' },
+  FAQ: { label: 'Is it safe for kids?', content: 'Yes, our ginger shots are made from 100% natural ginger and lemon.' },
+  IMAGE: { label: 'Banner Image', content: 'https://images.unsplash.com/photo-1622484211148-71629844865c?q=80&w=800' },
+};
 
 const FormBuilder: React.FC = () => {
   const user = db.getCurrentUser();
@@ -110,6 +116,48 @@ const FormBuilder: React.FC = () => {
     setEditingForm({ ...editingForm, sections: updated });
   };
 
+  const updateOption = (sectionIdx: number, optionIdx: number, field: string, value: any) => {
+    const updated = [...(editingForm?.sections || [])];
+    const section = updated[sectionIdx];
+    if (!section.options) return;
+    
+    const newOptions = [...section.options];
+    newOptions[optionIdx] = { ...newOptions[optionIdx], [field]: value };
+    
+    if (section.type === 'PRODUCTS') {
+      const qty = field === 'qty' ? Number(value) : newOptions[optionIdx].qty;
+      const price = field === 'price' ? Number(value) : newOptions[optionIdx].price;
+      newOptions[optionIdx].value = JSON.stringify({ qty, price });
+      newOptions[optionIdx].qty = qty;
+      newOptions[optionIdx].price = price;
+    } else if (section.type === 'LOCATION' && field === 'label') {
+      newOptions[optionIdx].value = value;
+    }
+    
+    section.options = newOptions;
+    setEditingForm({ ...editingForm, sections: updated });
+  };
+
+  const addOption = (sectionIdx: number) => {
+    const updated = [...(editingForm?.sections || [])];
+    const section = updated[sectionIdx];
+    const newOption = section.type === 'PRODUCTS' 
+      ? { label: 'New Package', value: JSON.stringify({ qty: 1, price: 0 }), qty: 1, price: 0 }
+      : { label: 'New State', value: 'New State' };
+    
+    section.options = [...(section.options || []), newOption];
+    setEditingForm({ ...editingForm, sections: updated });
+  };
+
+  const removeOption = (sectionIdx: number, optionIdx: number) => {
+    const updated = [...(editingForm?.sections || [])];
+    const section = updated[sectionIdx];
+    if (!section.options) return;
+    
+    section.options = section.options.filter((_, i) => i !== optionIdx);
+    setEditingForm({ ...editingForm, sections: updated });
+  };
+
   const moveSection = (index: number, direction: 'up' | 'down') => {
     const sections = [...(editingForm?.sections || [])];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -154,11 +202,17 @@ const FormBuilder: React.FC = () => {
 
   const getEmbedCode = (form: OrderForm) => {
     const agentName = (form.assignedToNames && form.assignedToNames.length > 0) ? form.assignedToNames[0] : form.createdBy;
-    const packageOptions = PACKAGES.map(pkg => 
-      `<option value='{"qty":${pkg.qty}, "price":${pkg.price}}'>${pkg.label}</option>`
+    
+    const productsSection = form.sections.find(s => s.type === 'PRODUCTS');
+    const locationSection = form.sections.find(s => s.type === 'LOCATION');
+
+    const packageOptions = (productsSection?.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }), price: p.price, qty: p.qty }))).map(opt => 
+      `<option value='${opt.value}'>${opt.label}</option>`
     ).join('\n            ');
 
-    const stateOptions = NIGERIA_STATES.map(s => `<option value="${s}">${s}</option>`).join('\n            ');
+    const stateOptions = (locationSection?.options || NIGERIA_STATES.map(s => ({ label: s, value: s }))).map(opt => 
+      `<option value="${opt.value}">${opt.label}</option>`
+    ).join('\n            ');
 
     const sectionsHtml = form.sections.map(sec => {
       switch (sec.type) {
@@ -667,6 +721,68 @@ const FormBuilder: React.FC = () => {
                             setEditingForm({...editingForm, sections: updated});
                           }} placeholder={`Enter ${section.type.toLowerCase()} content...`}/>
                         )}
+
+                        {section.type === 'PRODUCTS' && (
+                          <div className="space-y-3 mt-4">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Package Options</label>
+                              <button onClick={() => addOption(idx)} className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest">+ Add Package</button>
+                            </div>
+                            <div className="space-y-2">
+                              {(section.options || []).map((opt, optIdx) => (
+                                <div key={optIdx} className="flex gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                  <input 
+                                    className="flex-1 bg-transparent border-none text-xs font-bold focus:ring-0 p-0"
+                                    value={opt.label}
+                                    onChange={e => updateOption(idx, optIdx, 'label', e.target.value)}
+                                    placeholder="Package Label"
+                                  />
+                                  <div className="flex items-center gap-2 border-l border-slate-200 pl-2">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase">Qty</span>
+                                    <input 
+                                      type="number"
+                                      className="w-12 bg-transparent border-none text-xs font-bold focus:ring-0 p-0 text-center"
+                                      value={opt.qty || 0}
+                                      onChange={e => updateOption(idx, optIdx, 'qty', e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2 border-l border-slate-200 pl-2">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase">₦</span>
+                                    <input 
+                                      type="number"
+                                      className="w-20 bg-transparent border-none text-xs font-bold focus:ring-0 p-0"
+                                      value={opt.price || 0}
+                                      onChange={e => updateOption(idx, optIdx, 'price', e.target.value)}
+                                    />
+                                  </div>
+                                  <button onClick={() => removeOption(idx, optIdx)} className="text-slate-300 hover:text-red-500 transition">✕</button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {section.type === 'LOCATION' && (
+                          <div className="space-y-3 mt-4">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">State Options</label>
+                              <button onClick={() => addOption(idx)} className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest">+ Add State</button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {(section.options || []).map((opt, optIdx) => (
+                                <div key={optIdx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                  <input 
+                                    className="flex-1 bg-transparent border-none text-xs font-bold focus:ring-0 p-0"
+                                    value={opt.label}
+                                    onChange={e => updateOption(idx, optIdx, 'label', e.target.value)}
+                                    placeholder="State Name"
+                                  />
+                                  <button onClick={() => removeOption(idx, optIdx)} className="text-slate-300 hover:text-red-500 transition">✕</button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -716,7 +832,7 @@ const FormBuilder: React.FC = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.package} onChange={e => setPreviewData({...previewData, package: e.target.value})}>
                                   <option value="">Choose Package...</option>
-                                  {PACKAGES.map((pkg, i) => <option key={i} value={JSON.stringify({ qty: pkg.qty, price: pkg.price })}>{pkg.label}</option>)}
+                                  {(sec.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }) }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
                                 </select>
                               </div>
                             );
@@ -731,7 +847,7 @@ const FormBuilder: React.FC = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.state} onChange={e => setPreviewData({...previewData, state: e.target.value})}>
                                   <option value="">-- Select State --</option>
-                                  {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                  {(sec.options || NIGERIA_STATES.map(s => ({ label: s, value: s }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
                                 </select>
                               </div>
                             );

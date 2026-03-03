@@ -89,11 +89,19 @@ export interface Order {
 
 export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'LOCATION' | 'ADDRESS' | 'DELIVERY_INSTRUCTIONS' | 'CUSTOM_TEXT' | 'BENEFITS' | 'TESTIMONIALS' | 'FAQ' | 'IMAGE';
 
+export interface FormOption {
+  label: string;
+  value: string;
+  price?: number;
+  qty?: number;
+}
+
 export interface FormSection {
   id: string;
   type: SectionType;
   label?: string;
   content?: string;
+  options?: FormOption[];
 }
 
 export interface OrderForm {
