@@ -95,6 +95,25 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
       return;
     }
 
+    // Custom Validation: Phone/WhatsApp must be 11 digits
+    const phoneRegex = /^\d{11}$/;
+    if (!phoneRegex.test(newOrder.phone || '')) {
+      alert("Phone number must be exactly 11 digits.");
+      return;
+    }
+    if (newOrder.whatsapp && !phoneRegex.test(newOrder.whatsapp)) {
+      alert("WhatsApp number must be exactly 11 digits.");
+      return;
+    }
+
+    // Custom Validation: Address must be at least 3 words
+    const address = newOrder.address || '';
+    const wordCount = address.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
+    if (wordCount < 3) {
+      alert("Please provide a more detailed delivery address (at least 3 words).");
+      return;
+    }
+
     const total = newOrder.items.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0);
     const order: Order = {
       id: 'ORD-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
@@ -182,7 +201,7 @@ ${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Address: ${order.address
 ${itemsText}
 ----------------------------
 💰 FINANCIAL SUMMARY
-Total Amount: ₦${order.totalAmount.toLocaleString()}
+Main Value: ₦${order.totalAmount.toLocaleString()}
 Payment Mode: ${order.paymentStatus}
 Status: ${order.deliveryStatus}
 ----------------------------
@@ -505,11 +524,11 @@ Stay Healthy, Stay Energized!`.trim();
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Voice Phone</label>
-                    <input required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
+                    <input required type="tel" pattern="\d{11}" title="Please enter exactly 11 digits" className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium" onChange={e => setNewOrder({...newOrder, phone: e.target.value})} />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp Line</label>
-                    <input className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium" onChange={e => setNewOrder({...newOrder, whatsapp: e.target.value})} />
+                    <input required type="tel" pattern="\d{11}" title="Please enter exactly 11 digits" className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium" onChange={e => setNewOrder({...newOrder, whatsapp: e.target.value})} />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Street / Delivery Address</label>

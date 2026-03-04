@@ -83,7 +83,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
         </div>
         <div className="text-right">
           <p className="text-2xl font-black text-slate-900">₦{estimatedValue.toLocaleString()}</p>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Estimated Value</p>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Main Value</p>
         </div>
       </div>
 

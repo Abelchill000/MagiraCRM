@@ -156,6 +156,25 @@ const FormBuilder: React.FC = () => {
     e.preventDefault();
     if (!previewForm || !user) return;
 
+    // Custom Validation: Phone/WhatsApp must be 11 digits
+    const phoneRegex = /^\d{11}$/;
+    if (!phoneRegex.test(previewData.phone)) {
+      alert("Phone number must be exactly 11 digits.");
+      return;
+    }
+    if (previewData.whatsapp && !phoneRegex.test(previewData.whatsapp)) {
+      alert("WhatsApp number must be exactly 11 digits.");
+      return;
+    }
+
+    // Custom Validation: Address must be at least 3 words
+    const address = previewData.address || '';
+    const wordCount = address.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
+    if (wordCount < 3) {
+      alert("Please provide a more detailed delivery address (at least 3 words).");
+      return;
+    }
+
     setIsSubmittingPreview(true);
 
     let pkg = { qty: 1 };
@@ -200,13 +219,13 @@ const FormBuilder: React.FC = () => {
         case 'IMAGE':
           return `<div style="width: 100%;"><img src="${sec.content}" style="width: 100%; display: block; height: auto;" alt="Magira Image"></div>`;
         case 'CONTACT':
-          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="phone" placeholder="Phone Number (Call)" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="whatsapp" placeholder="WhatsApp Number" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-size: 14px;"></div>`;
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="phone" placeholder="Phone Number (Call) - 11 Digits" required pattern="\\d{11}" title="Please enter exactly 11 digits" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="whatsapp" placeholder="WhatsApp Number - 11 Digits" required pattern="\\d{11}" title="Please enter exactly 11 digits" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-size: 14px;"></div>`;
         case 'PRODUCTS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="packageData" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px; font-weight: 600;"><option value="">-- Choose Ginger Shot Package --</option>${packageOptions}</select></div>`;
         case 'ADDRESS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="${sec.content || 'Full Delivery Address'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'DELIVERY_INSTRUCTIONS':
-          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="deliveryInstructions" rows="2" placeholder="${sec.content || 'Add specific instructions for the delivery agent...'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="deliveryInstructions" required rows="2" placeholder="${sec.content || 'Add specific instructions for the delivery agent...'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'BENEFITS':
           const benefits = (sec.content || '').split('\n').map(b => `<li style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #475569;"><span style="color: ${form.themeColor}; font-weight: bold;">✓</span> <span>${b.trim()}</span></li>`).join('');
           return `<div style="padding: 24px; background: #f8fafc; border-radius: 16px; margin: 0 24px;"><h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 800; color: #1e293b;">${sec.label}</h3><ul style="list-style: none; padding: 0; margin: 0;">${benefits}</ul></div>`;
@@ -305,14 +324,23 @@ const FormBuilder: React.FC = () => {
   // Successful Lead Submission
   formEl.addEventListener('submit', async function(e) {
     e.preventDefault();
+    
+    const formData = new FormData(this);
+    const rawData = Object.fromEntries(formData.entries());
+    
+    // Custom Validation: Address must be at least 3 words
+    const address = rawData.address || '';
+    const wordCount = address.trim().split(/\\s+/).filter(word => word.length > 0).length;
+    if (wordCount < 3) {
+      alert('Please provide a more detailed delivery address (at least 3 words).');
+      return;
+    }
+
     const btn = this.querySelector('button');
     const originalText = btn.innerText;
     
     btn.disabled = true;
     btn.innerText = 'Transmitting Order...';
-    
-    const formData = new FormData(this);
-    const rawData = Object.fromEntries(formData.entries());
     
     let pkg = { qty: 1, price: 0 };
     try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
@@ -786,7 +814,8 @@ const FormBuilder: React.FC = () => {
                               <div key={sec.id} className="px-10 py-8 space-y-4">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{sec.label}</label>
                                 <input required placeholder="Name" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.customerName} onChange={e => setPreviewData({...previewData, customerName: e.target.value})} />
-                                <input required placeholder="Phone" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.phone} onChange={e => setPreviewData({...previewData, phone: e.target.value})} />
+                                <input required type="tel" pattern="\\d{11}" title="Please enter exactly 11 digits" placeholder="Phone (11 Digits)" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.phone} onChange={e => setPreviewData({...previewData, phone: e.target.value})} />
+                                <input required type="tel" pattern="\\d{11}" title="Please enter exactly 11 digits" placeholder="WhatsApp (11 Digits)" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.whatsapp} onChange={e => setPreviewData({...previewData, whatsapp: e.target.value})} />
                               </div>
                             );
                             case 'PRODUCTS': return (
@@ -807,7 +836,7 @@ const FormBuilder: React.FC = () => {
                             case 'DELIVERY_INSTRUCTIONS': return (
                               <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
-                                <textarea placeholder={sec.content} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={2} value={previewData.deliveryInstructions} onChange={e => setPreviewData({...previewData, deliveryInstructions: e.target.value})} />
+                                <textarea required placeholder={sec.content} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={2} value={previewData.deliveryInstructions} onChange={e => setPreviewData({...previewData, deliveryInstructions: e.target.value})} />
                               </div>
                             );
                             case 'BENEFITS': return (
