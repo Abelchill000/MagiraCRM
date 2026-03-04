@@ -49,6 +49,7 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       phone: cart.phone || '0000000000',
       whatsapp: cart.whatsapp,
       address: cart.address || 'Address captured from abandoned cart',
+      stateName: cart.stateName,
       deliveryInstructions: cart.deliveryInstructions || 'Manual recovery follow-up',
       items,
       totalAmount: items.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0),
@@ -71,8 +72,9 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     if (cart.customerName) fields++;
     if (cart.phone) fields++;
     if (cart.address) fields++;
+    if (cart.stateName) fields++;
     if (cart.whatsapp) fields++;
-    return Math.round((fields / 4) * 100);
+    return Math.round((fields / 5) * 100);
   };
 
   return (
@@ -123,9 +125,14 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                         <span className={`text-[8px] font-black px-2 py-0.5 rounded ${cart.customerName ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'}`}>NAME</span>
                         <span className={`text-[8px] font-black px-2 py-0.5 rounded ${cart.phone ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'}`}>PHONE</span>
                         <span className={`text-[8px] font-black px-2 py-0.5 rounded ${cart.address ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'}`}>ADDR</span>
+                        <span className={`text-[8px] font-black px-2 py-0.5 rounded ${cart.stateName ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'}`}>STATE</span>
                         <span className={`text-[8px] font-black px-2 py-0.5 rounded ${cart.whatsapp ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-300'}`}>WA</span>
                       </div>
-                      {cart.address && <p className="text-[9px] text-slate-400 italic mt-2 truncate max-w-[150px]">{cart.address}</p>}
+                      {(cart.address || cart.stateName) && (
+                        <p className="text-[9px] text-slate-400 italic mt-2 truncate max-w-[150px]">
+                          {cart.address}{cart.stateName ? `, ${cart.stateName}` : ''}
+                        </p>
+                      )}
                     </td>
                     <td className="px-8 py-5 text-center">
                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden max-w-[80px] mx-auto">

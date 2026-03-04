@@ -11,6 +11,13 @@ interface OrdersProps {
   user: User;
 }
 
+const NIGERIA_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta',
+  'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
+  'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers',
+  'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+];
+
 const Orders: React.FC<OrdersProps> = ({ user }) => {
   const [dbOrders, setDbOrders] = useState<Order[]>(db.getOrders());
   const [products] = useState(db.getProducts());
@@ -122,6 +129,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
       phone: newOrder.phone || '',
       whatsapp: newOrder.whatsapp || '',
       address: newOrder.address || '',
+      stateName: newOrder.stateName || '',
       deliveryInstructions: newOrder.deliveryInstructions || '',
       items: newOrder.items,
       totalAmount: total,
@@ -196,7 +204,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 Name: ${order.customerName}
 Phone: ${order.phone}
 ${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Address: ${order.address}
-----------------------------
+${order.stateName ? `State: ${order.stateName}\n` : ''}----------------------------
 📦 ORDER ITEMS
 ${itemsText}
 ----------------------------
@@ -374,6 +382,21 @@ Stay Healthy, Stay Energized!`.trim();
                   )}
                 </div>
                 <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery State</label>
+                  {isEditingOrder ? (
+                    <select 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 appearance-none"
+                      value={editingOrderData.stateName || ''}
+                      onChange={e => setEditingOrderData({...editingOrderData, stateName: e.target.value})}
+                    >
+                      <option value="">Select State...</option>
+                      {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-sm font-black text-slate-900 bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 uppercase tracking-widest">{viewingOrder.stateName || 'Not Specified'}</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Directives</label>
                   {isEditingOrder ? (
                     <textarea 
@@ -533,6 +556,13 @@ Stay Healthy, Stay Energized!`.trim();
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Street / Delivery Address</label>
                     <textarea required rows={2} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium" onChange={e => setNewOrder({...newOrder, address: e.target.value})} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Delivery State</label>
+                    <select required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium appearance-none" onChange={e => setNewOrder({...newOrder, stateName: e.target.value})}>
+                      <option value="">-- Select State --</option>
+                      {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Special Logistics Notes</label>

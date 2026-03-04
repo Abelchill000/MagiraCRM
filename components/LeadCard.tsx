@@ -129,11 +129,17 @@ const LeadCard: React.FC<LeadCardProps> = ({
       </div>
 
       {/* Location */}
-      <div className="flex flex-col gap-2 mb-8">
+      <div className="flex flex-col gap-1 mb-8">
         <div className="flex items-center gap-2 text-slate-400">
           <MapPin size={16} />
           <p className="text-sm font-bold truncate">{lead.address}</p>
         </div>
+        {lead.stateName && (
+          <div className="flex items-center gap-2 text-slate-400 ml-6">
+            <Globe size={12} />
+            <p className="text-[10px] font-black uppercase tracking-widest">{lead.stateName}</p>
+          </div>
+        )}
       </div>
 
       <div className="h-px bg-slate-50 mb-8" />

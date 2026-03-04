@@ -5,6 +5,13 @@ import { WebLead, LeadStatus, UserRole, PaymentStatus, DeliveryStatus, Order, Or
 
 import LeadCard from '../components/LeadCard';
 
+const NIGERIA_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta',
+  'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
+  'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers',
+  'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+];
+
 const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const user = db.getCurrentUser();
   const [leads, setLeads] = useState<WebLead[]>(db.getLeads());
@@ -74,6 +81,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 📞 Phone: ${lead.phone}
 📲 WhatsApp: ${lead.whatsapp || 'N/A'}
 📍 Address: ${lead.address}
+🗺️ State: ${lead.stateName || 'N/A'}
 📝 Instructions: ${lead.deliveryInstructions || 'None'}
 📅 Captured: ${new Date(lead.createdAt).toLocaleString()}
 👤 Agent: ${lead.agentName || 'Network'}
@@ -119,6 +127,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       phone: selectedLead.phone,
       whatsapp: selectedLead.whatsapp,
       address: selectedLead.address,
+      stateName: selectedLead.stateName,
       deliveryInstructions: selectedLead.deliveryInstructions,
       items: orderItems,
       totalAmount: total,
@@ -238,6 +247,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                         phone: viewingLead.phone,
                         whatsapp: viewingLead.whatsapp,
                         address: viewingLead.address,
+                        stateName: viewingLead.stateName,
                         deliveryInstructions: viewingLead.deliveryInstructions
                       });
                     }}
@@ -304,6 +314,21 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                     />
                   ) : (
                     <p className="text-sm font-bold text-slate-700 bg-slate-50 p-6 rounded-2xl border border-slate-100 leading-relaxed italic">"{viewingLead.address}"</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery State</label>
+                  {isEditingLead ? (
+                    <select 
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 appearance-none"
+                      value={editingLeadData.stateName || ''}
+                      onChange={e => setEditingLeadData({...editingLeadData, stateName: e.target.value})}
+                    >
+                      <option value="">Select State...</option>
+                      {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-sm font-black text-slate-900 bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 uppercase tracking-widest">{viewingLead.stateName || 'Not Specified'}</p>
                   )}
                 </div>
                 <div className="md:col-span-2">

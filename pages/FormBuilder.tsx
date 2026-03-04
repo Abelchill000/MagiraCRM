@@ -15,6 +15,13 @@ const PACKAGES = [
   { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Bonus)', qty: 30, price: 500000 },
 ];
 
+const NIGERIA_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta',
+  'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
+  'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers',
+  'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+];
+
 const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
   CONTACT: { label: 'Enter Shipping Info' },
@@ -23,6 +30,7 @@ const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
     options: PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }), price: p.price, qty: p.qty }))
   },
   ADDRESS: { label: 'Street Address', content: 'Full Delivery Address' },
+  LOCATION: { label: 'Delivery State', content: 'Select State' },
   DELIVERY_INSTRUCTIONS: { label: 'Delivery Instructions', content: 'e.g. Leave at the gate, Call before arrival, etc.' },
   CUSTOM_TEXT: { label: 'Special Instructions', content: 'Delivery takes 24-48 hours.' },
   BENEFITS: { label: 'Why Choose Magira?', content: '100% Organic\nNo Preservatives\nInstant Energy\nRich in Vitamin C' },
@@ -47,6 +55,7 @@ const FormBuilder: React.FC = () => {
     whatsapp: '',
     package: '',
     address: '',
+    stateName: '',
     deliveryInstructions: ''
   });
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
@@ -187,6 +196,7 @@ const FormBuilder: React.FC = () => {
       phone: previewData.phone,
       whatsapp: previewData.whatsapp,
       address: previewData.address,
+      stateName: previewData.stateName,
       deliveryInstructions: previewData.deliveryInstructions,
       items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }],
       status: LeadStatus.NEW,
@@ -224,6 +234,9 @@ const FormBuilder: React.FC = () => {
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="packageData" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px; font-weight: 600;"><option value="">-- Choose Ginger Shot Package --</option>${packageOptions}</select></div>`;
         case 'ADDRESS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="${sec.content || 'Full Delivery Address'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
+        case 'LOCATION':
+          const stateOptions = NIGERIA_STATES.map(s => `<option value="${s}">${s}</option>`).join('');
+          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="stateName" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px; font-weight: 600;"><option value="">-- Select Delivery State --</option>${stateOptions}</select></div>`;
         case 'DELIVERY_INSTRUCTIONS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="deliveryInstructions" required rows="2" placeholder="${sec.content || 'Add specific instructions for the delivery agent...'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'BENEFITS':
@@ -281,6 +294,7 @@ const FormBuilder: React.FC = () => {
         phone: rawData.phone || '',
         whatsapp: rawData.whatsapp || '',
         address: rawData.address || '',
+        stateName: rawData.stateName || '',
         deliveryInstructions: rawData.deliveryInstructions || '',
         agentName: agentName,
         status: 'abandoned',
@@ -302,6 +316,7 @@ const FormBuilder: React.FC = () => {
             phone: { stringValue: payload.phone },
             whatsapp: { stringValue: payload.whatsapp },
             address: { stringValue: payload.address },
+            stateName: { stringValue: payload.stateName },
             deliveryInstructions: { stringValue: payload.deliveryInstructions },
             agentName: { stringValue: payload.agentName },
             status: { stringValue: payload.status },
@@ -353,6 +368,7 @@ const FormBuilder: React.FC = () => {
       phone: rawData.phone,
       whatsapp: rawData.whatsapp || '',
       address: rawData.address,
+      stateName: rawData.stateName || '',
       deliveryInstructions: rawData.deliveryInstructions || '',
       status: 'New Lead',
       notes: 'Captured via Landing Page by ' + agentName,
@@ -374,6 +390,7 @@ const FormBuilder: React.FC = () => {
             phone: { stringValue: payload.phone },
             whatsapp: { stringValue: payload.whatsapp },
             address: { stringValue: payload.address },
+            stateName: { stringValue: payload.stateName },
             deliveryInstructions: { stringValue: payload.deliveryInstructions },
             status: { stringValue: payload.status },
             notes: { stringValue: payload.notes },
@@ -601,7 +618,7 @@ const FormBuilder: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Essentials</p>
                   <div className="grid grid-cols-1 gap-2">
-                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'ADDRESS', 'DELIVERY_INSTRUCTIONS', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ'] as SectionType[]).map(type => (
+                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'ADDRESS', 'LOCATION', 'DELIVERY_INSTRUCTIONS', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ'] as SectionType[]).map(type => (
                       <button key={type} onClick={() => addSection(type)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-left hover:border-emerald-500 transition-all flex items-center gap-3 group">
                         <span className="bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{type.replace('_', ' ')}</span>
@@ -831,6 +848,15 @@ const FormBuilder: React.FC = () => {
                               <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <textarea required placeholder={sec.content || "Address..."} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={3} value={previewData.address} onChange={e => setPreviewData({...previewData, address: e.target.value})} />
+                              </div>
+                            );
+                            case 'LOCATION': return (
+                              <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
+                                <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.stateName} onChange={e => setPreviewData({...previewData, stateName: e.target.value})}>
+                                  <option value="">Select State...</option>
+                                  {NIGERIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
                               </div>
                             );
                             case 'DELIVERY_INSTRUCTIONS': return (
