@@ -120,7 +120,7 @@ export interface WebLead {
   address: string;
   stateName?: string;
   deliveryInstructions?: string;
-  items: Array<{ productId: string; quantity: number }>;
+  items: Array<{ productId: string; quantity: number; priceAtCapture?: number }>;
   status: LeadStatus;
   notes: string;
   createdAt: string;

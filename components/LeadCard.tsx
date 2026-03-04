@@ -34,6 +34,9 @@ const LeadCard: React.FC<LeadCardProps> = ({
   isNew
 }) => {
   const estimatedValue = lead.items.reduce((acc, item) => {
+    if (item.priceAtCapture !== undefined) {
+      return acc + (item.priceAtCapture * item.quantity);
+    }
     const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
     return acc + (p ? p.sellingPrice * item.quantity : 20000 * item.quantity);
   }, 0);

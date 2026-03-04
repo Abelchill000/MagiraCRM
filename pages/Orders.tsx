@@ -31,6 +31,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const [showRescheduleModal, setShowRescheduleModal] = useState<{orderId: string} | null>(null);
   const [rescheduleData, setRescheduleData] = useState({ date: '', notes: '', reminder: true });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
     items: [],
@@ -56,15 +57,24 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   const canManageAllOrders = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
 
   const orders = useMemo(() => {
+    let filtered = dbOrders;
+    
     // Managers and Admins see everything
-    if (canManageAllOrders) {
-      return [...dbOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (!canManageAllOrders) {
+      filtered = filtered.filter(o => o.createdBy === user?.name);
     }
-    // Standard agents only see orders they created (or were converted from their leads)
-    return dbOrders
-      .filter(o => o.createdBy === user?.name)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [dbOrders, isAdmin, isSuperAgent, user?.name]);
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(o => 
+        o.customerName.toLowerCase().includes(term) ||
+        o.id.toLowerCase().includes(term) ||
+        o.trackingId.toLowerCase().includes(term)
+      );
+    }
+
+    return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [dbOrders, canManageAllOrders, user?.name, searchTerm]);
 
   const handleAddItem = (productId: string) => {
     const product = products.find(p => p.id === productId);
@@ -262,6 +272,21 @@ Stay Healthy, Stay Energized!`.trim();
         >
           + New Order
         </button>
+      </div>
+
+      <div className="relative">
+        <input 
+          type="text"
+          placeholder="Search by Name, Order ID, or Tracking ID..."
+          className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+        />
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

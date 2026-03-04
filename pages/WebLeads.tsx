@@ -26,6 +26,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   
   const [showLogisticsPrompt, setShowLogisticsPrompt] = useState<{orderId: string, leadId: string} | null>(null);
   const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [convDetails, setConvDetails] = useState({
     paymentStatus: PaymentStatus.POD
@@ -49,15 +50,23 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   }, []);
 
   const sortedLeads = useMemo(() => {
+    let filtered = leads;
+    
     // Admin and Super Agent see everything
-    if (isAdmin || isSuperAgent) {
-      return [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (!(isAdmin || isSuperAgent)) {
+      filtered = filtered.filter(l => l.agentName === user?.name);
     }
-    // Regular agents see only leads attributed to them
-    return leads
-      .filter(l => l.agentName === user?.name)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [leads, isAdmin, isSuperAgent, user?.name]);
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(l => 
+        l.customerName.toLowerCase().includes(term) ||
+        l.id.toLowerCase().includes(term)
+      );
+    }
+
+    return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [leads, isAdmin, isSuperAgent, user?.name, searchTerm]);
 
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
@@ -194,6 +203,21 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           <p className="text-slate-500 text-sm font-medium">
             {isAdmin || isSuperAgent ? 'Network-wide lead capture monitoring.' : 'Tracking leads attributed to your sales profile.'}
           </p>
+        </div>
+      </div>
+
+      <div className="relative">
+        <input 
+          type="text"
+          placeholder="Search by Name or Lead ID..."
+          className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+        />
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
       </div>
 

@@ -186,7 +186,7 @@ const FormBuilder: React.FC = () => {
 
     setIsSubmittingPreview(true);
 
-    let pkg = { qty: 1 };
+    let pkg = { qty: 1, price: 0 };
     try { pkg = JSON.parse(previewData.package); } catch(err) {}
 
     const lead: WebLead = {
@@ -198,7 +198,7 @@ const FormBuilder: React.FC = () => {
       address: previewData.address,
       stateName: previewData.stateName,
       deliveryInstructions: previewData.deliveryInstructions,
-      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }],
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty, priceAtCapture: pkg.price }],
       status: LeadStatus.NEW,
       notes: `Captured from LIVE PREVIEW by ${user.name}`,
       createdAt: new Date().toISOString(),
@@ -284,7 +284,7 @@ const FormBuilder: React.FC = () => {
       const formData = new FormData(formEl);
       const rawData = Object.fromEntries(formData.entries());
       
-      let pkg = { qty: 1 };
+      let pkg = { qty: 1, price: 0 };
       try { pkg = JSON.parse(rawData.packageData); } catch(err) {}
 
       const payload = {
@@ -301,7 +301,7 @@ const FormBuilder: React.FC = () => {
         lastUpdatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(), // Only set on first write
         pageUrl: window.location.href,
-        items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }]
+        items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty, priceAtCapture: pkg.price }]
       };
 
       // Push partial data to Firestore abandoned_carts
@@ -326,7 +326,7 @@ const FormBuilder: React.FC = () => {
             items: {
               arrayValue: {
                 values: payload.items.map(i => ({
-                  mapValue: { fields: { productId: { stringValue: i.productId }, quantity: { integerValue: i.quantity } } }
+                  mapValue: { fields: { productId: { stringValue: i.productId }, quantity: { integerValue: i.quantity }, priceAtCapture: { doubleValue: i.priceAtCapture || 0 } } }
                 }))
               }
             }
@@ -374,7 +374,7 @@ const FormBuilder: React.FC = () => {
       notes: 'Captured via Landing Page by ' + agentName,
       createdAt: new Date().toISOString(),
       agentName: agentName,
-      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }]
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty, priceAtCapture: pkg.price }]
     };
 
     try {
@@ -402,7 +402,8 @@ const FormBuilder: React.FC = () => {
                   mapValue: {
                     fields: {
                       productId: { stringValue: i.productId },
-                      quantity: { integerValue: i.quantity }
+                      quantity: { integerValue: i.quantity },
+                      priceAtCapture: { doubleValue: i.priceAtCapture || 0 }
                     }
                   }
                 }))
