@@ -8,7 +8,6 @@ import Dashboard from './pages/Dashboard.tsx';
 import Products from './pages/Products.tsx';
 import Orders from './pages/Orders.tsx';
 import Logistics from './pages/Logistics.tsx';
-import WhatsAppCenter from './pages/WhatsAppCenter.tsx';
 import Analytics from './pages/Analytics.tsx';
 import FormBuilder from './pages/FormBuilder.tsx';
 import WebLeads from './pages/WebLeads.tsx';
@@ -211,7 +210,6 @@ const App: React.FC = () => {
                     <option value={UserRole.SALES_AGENT}>Sales Agent</option>
                     <option value={UserRole.INVENTORY_MANAGER}>Inventory Manager</option>
                     <option value={UserRole.LOGISTICS_MANAGER}>Logistics Manager</option>
-                    <option value={UserRole.STATE_MANAGER}>State Manager</option>
                   </select>
                 </div>
                 <div>
@@ -268,7 +266,6 @@ const App: React.FC = () => {
       case 'products': return <Products userRole={user.role} />;
       case 'orders': return <Orders user={user} />;
       case 'logistics': return <Logistics userRole={user.role} />;
-      case 'whatsapp': return <WhatsAppCenter />;
       case 'analytics': return <Analytics />;
       case 'formbuilder': return <FormBuilder />;
       case 'leads': return <WebLeads userRole={user.role} />;

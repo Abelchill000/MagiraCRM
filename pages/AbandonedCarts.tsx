@@ -1,15 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { db } from '../services/mockDb';
-import { AbandonedCart, UserRole, Order, DeliveryStatus, PaymentStatus, OrderItem, State } from '../types';
+import { AbandonedCart, UserRole, Order, DeliveryStatus, PaymentStatus, OrderItem } from '../types';
 
 const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const user = db.getCurrentUser();
   const [carts, setCarts] = useState<AbandonedCart[]>(db.getAbandonedCarts());
-  const [states] = useState<State[]>(db.getStates());
   const products = db.getProducts();
   const [showConvertModal, setShowConvertModal] = useState<AbandonedCart | null>(null);
-  const [selectedState, setSelectedState] = useState('');
 
   const isAdmin = userRole === UserRole.ADMIN;
 
@@ -30,7 +28,7 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 
   const handleConvert = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!showConvertModal || !selectedState || !user) return;
+    if (!showConvertModal || !user) return;
 
     const cart = showConvertModal;
     const items: OrderItem[] = (cart.items || []).map(i => {
@@ -52,7 +50,6 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       whatsapp: cart.whatsapp,
       address: cart.address || 'Address captured from abandoned cart',
       deliveryInstructions: cart.deliveryInstructions || 'Manual recovery follow-up',
-      stateId: selectedState,
       items,
       totalAmount: items.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0),
       logisticsCost: 0,
@@ -174,13 +171,6 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               <h2 className="text-2xl font-black text-slate-800 mb-2">Recover & Ship</h2>
               <p className="text-slate-500 text-sm mb-10 font-medium">Verify delivery details for <strong>{showConvertModal.customerName || 'Captured Lead'}</strong>.</p>
               <form onSubmit={handleConvert} className="space-y-6">
-                 <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Assigned Distribution Hub</label>
-                    <select required className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-amber-500 font-bold" value={selectedState} onChange={e => setSelectedState(e.target.value)}>
-                       <option value="">-- Choose Hub --</option>
-                       {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                 </div>
                  <div className="pt-6">
                     <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition active:scale-95">Finalize Conversion</button>
                     <button type="button" onClick={() => setShowConvertModal(null)} className="w-full mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Discard Follow-up</button>

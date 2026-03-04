@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb.ts';
 
-type CollectionType = 'users' | 'products' | 'orders' | 'leads' | 'states' | 'logistics';
+type CollectionType = 'users' | 'products' | 'orders' | 'leads' | 'logistics';
 
 const DatabaseExplorer: React.FC = () => {
   const [activeCollection, setActiveCollection] = useState<CollectionType>('users');
@@ -15,7 +15,6 @@ const DatabaseExplorer: React.FC = () => {
       products: db.getProducts(),
       orders: db.getOrders(),
       leads: db.getLeads(),
-      states: db.getStates(),
       logistics: db.getLogistics()
     });
   };
@@ -31,7 +30,6 @@ const DatabaseExplorer: React.FC = () => {
     { id: 'orders', label: 'orders', icon: '🛒' },
     { id: 'products', label: 'inventory', icon: '📦' },
     { id: 'leads', label: 'leads', icon: '⚡' },
-    { id: 'states', label: 'states', icon: '🗺️' },
     { id: 'logistics', label: 'logistics', icon: '🚚' }
   ];
 

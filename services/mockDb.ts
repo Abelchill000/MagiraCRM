@@ -9,7 +9,7 @@ import {
   signOut, onAuthStateChanged 
 } from 'firebase/auth';
 import { 
-  Product, State, LogisticsPartner, Order, User, UserRole, 
+  Product, LogisticsPartner, Order, User, UserRole, 
   DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget 
 } from '../types';
 
@@ -32,7 +32,6 @@ type Listener = () => void;
 class FirebaseDb {
   private data: {
     products: Product[];
-    states: State[];
     logistics: LogisticsPartner[];
     orders: Order[];
     forms: OrderForm[];
@@ -42,7 +41,6 @@ class FirebaseDb {
     budgets: AdsBudget[];
   } = {
     products: [],
-    states: [],
     logistics: [],
     orders: [],
     forms: [],
@@ -96,7 +94,7 @@ class FirebaseDb {
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
-    const collectionsToSync = ['products', 'states', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets'];
+    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets'];
     
     if (isAdmin) {
       collectionsToSync.push('users');
@@ -236,7 +234,6 @@ class FirebaseDb {
 
   getProducts() { return [...this.data.products]; }
   getOrders() { return [...this.data.orders]; }
-  getStates() { return [...this.data.states]; }
   getLogistics() { return [...this.data.logistics]; }
   getForms() { return [...this.data.forms]; }
   getLeads() { return [...this.data.leads]; }
@@ -258,10 +255,6 @@ class FirebaseDb {
     if (extra?.rescheduleNotes) updates.rescheduleNotes = extra.rescheduleNotes;
     if (extra?.reminderEnabled !== undefined) updates.reminderEnabled = extra.reminderEnabled;
     await updateDoc(doc(firestore, 'orders', orderId), updates);
-  }
-  async saveState(state: State) {
-    const { id, ...rest } = state;
-    await setDoc(doc(firestore, 'states', id), rest);
   }
   async saveLogistics(partner: LogisticsPartner) {
     const { id, ...rest } = partner;
@@ -301,34 +294,6 @@ class FirebaseDb {
     const updates: any = { status };
     if (notes) updates.notes = notes;
     await updateDoc(doc(firestore, 'leads', leadId), updates);
-  }
-  async transferStock(productId: string, stateId: string, quantity: number) {
-    const product = this.data.products.find(p => p.id === productId);
-    if (product && product.totalStock >= quantity) {
-      const newTotal = product.totalStock - quantity;
-      const newStateQty = (product.stockPerState[stateId] || 0) + quantity;
-      await updateDoc(doc(firestore, 'products', productId), {
-        totalStock: newTotal,
-        [`stockPerState.${stateId}`]: newStateQty
-      });
-      return true;
-    }
-    return false;
-  }
-  async updateStateHubStock(productId: string, stateId: string, newQuantity: number) {
-    const product = this.data.products.find(p => p.id === productId);
-    if (product) {
-      await updateDoc(doc(firestore, 'products', productId), {
-        [`stockPerState.${stateId}`]: Math.max(0, newQuantity)
-      });
-    }
-  }
-  async restockStateHub(productId: string, stateId: string, quantity: number) {
-    const product = this.data.products.find(p => p.id === productId);
-    if (product) {
-      const newQty = (product.stockPerState[stateId] || 0) + quantity;
-      await this.updateStateHubStock(productId, stateId, newQty);
-    }
   }
 }
 

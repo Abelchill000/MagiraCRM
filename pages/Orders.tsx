@@ -14,7 +14,6 @@ interface OrdersProps {
 const Orders: React.FC<OrdersProps> = ({ user }) => {
   const [dbOrders, setDbOrders] = useState<Order[]>(db.getOrders());
   const [products] = useState(db.getProducts());
-  const [states] = useState(db.getStates());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -105,7 +104,6 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
       whatsapp: newOrder.whatsapp || '',
       address: newOrder.address || '',
       deliveryInstructions: newOrder.deliveryInstructions || '',
-      stateId: newOrder.stateId || '',
       items: newOrder.items,
       totalAmount: total,
       logisticsCost: 0,
@@ -167,7 +165,6 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const copyReceiptText = (order: Order) => {
     const itemsText = order.items.map(i => `• ${i.productName} x${i.quantity} @ ₦${i.priceAtOrder.toLocaleString()}`).join('\n');
-    const stateName = states.find(s => s.id === order.stateId)?.name || 'General Network';
     const orderDate = new Date(order.createdAt).toLocaleDateString('en-NG', { dateStyle: 'long' });
 
     const text = `🌿 MAGIRA OFFICIAL RECEIPT
@@ -179,8 +176,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 📝 CUSTOMER DETAILS
 Name: ${order.customerName}
 Phone: ${order.phone}
-${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Region: ${stateName}
-Address: ${order.address}
+${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Address: ${order.address}
 ----------------------------
 📦 ORDER ITEMS
 ${itemsText}
@@ -260,7 +256,6 @@ Stay Healthy, Stay Energized!`.trim();
               onDelete={(id) => { if(window.confirm('Delete order?')) { db.deleteOrder(id); } }}
               onStatusChange={handleStatusChange}
               canManageAllOrders={canManageAllOrders}
-              states={states}
             />
           ))
         )}
@@ -285,7 +280,6 @@ Stay Healthy, Stay Energized!`.trim();
                         whatsapp: viewingOrder.whatsapp,
                         address: viewingOrder.address,
                         deliveryInstructions: viewingOrder.deliveryInstructions,
-                        stateId: viewingOrder.stateId,
                         trackingId: viewingOrder.trackingId
                       });
                     }}
@@ -345,23 +339,6 @@ Stay Healthy, Stay Energized!`.trim();
                     />
                   ) : (
                     <p className="text-lg font-black text-emerald-600">{viewingOrder.whatsapp || 'N/A'}</p>
-                  )}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Hub / State</label>
-                  {isEditingOrder ? (
-                    <select 
-                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                      value={editingOrderData.stateId || ''}
-                      onChange={e => setEditingOrderData({...editingOrderData, stateId: e.target.value})}
-                    >
-                      <option value="">-- Choose State Hub --</option>
-                      {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  ) : (
-                    <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                      {states.find(s => s.id === viewingOrder.stateId || s.name === viewingOrder.stateId)?.name || viewingOrder.stateId || 'General Network'}
-                    </p>
                   )}
                 </div>
                 <div className="md:col-span-2">
@@ -533,13 +510,6 @@ Stay Healthy, Stay Energized!`.trim();
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp Line</label>
                     <input className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 font-medium" onChange={e => setNewOrder({...newOrder, whatsapp: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Destination Hub</label>
-                    <select required className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 appearance-none font-medium" onChange={e => setNewOrder({...newOrder, stateId: e.target.value})}>
-                      <option value="">Choose Region...</option>
-                      {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Street / Delivery Address</label>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/mockDb';
-import { WebLead, LeadStatus, UserRole, State, PaymentStatus, DeliveryStatus, Order, OrderItem, OrderForm } from '../types';
+import { WebLead, LeadStatus, UserRole, PaymentStatus, DeliveryStatus, Order, OrderItem, OrderForm } from '../types';
 
 import LeadCard from '../components/LeadCard';
 
@@ -9,7 +9,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const user = db.getCurrentUser();
   const [leads, setLeads] = useState<WebLead[]>(db.getLeads());
   const [orders, setOrders] = useState<Order[]>(db.getOrders());
-  const [states, setStates] = useState<State[]>(db.getStates());
   const [forms, setForms] = useState<OrderForm[]>(db.getForms());
   const [products] = useState(db.getProducts());
   const [selectedLead, setSelectedLead] = useState<WebLead | null>(null);
@@ -22,7 +21,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
 
   const [convDetails, setConvDetails] = useState({
-    stateId: '',
     paymentStatus: PaymentStatus.POD
   });
 
@@ -38,7 +36,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const unsubscribe = db.subscribe(() => {
       setLeads(db.getLeads());
       setOrders(db.getOrders());
-      setStates(db.getStates());
       setForms(db.getForms());
     });
     return unsubscribe;
@@ -88,7 +85,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 
   const handleConvert = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedLead || !convDetails.stateId || !user) return;
+    if (!selectedLead || !user) return;
 
     const isSpecialPackage = selectedLead.items.some(i => i.productId === 'GINGER-SHOT-500ML');
     
@@ -123,7 +120,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       whatsapp: selectedLead.whatsapp,
       address: selectedLead.address,
       deliveryInstructions: selectedLead.deliveryInstructions,
-      stateId: convDetails.stateId,
       items: orderItems,
       totalAmount: total,
       logisticsCost: 0,
@@ -208,7 +204,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               onView={setViewingLead}
               onConvert={(l) => { 
                 setSelectedLead(l); 
-                setConvDetails(prev => ({ ...prev, stateId: l.stateId || '' }));
                 setShowConvertModal(true); 
               }}
               onDelete={handleDeleteLead}
@@ -219,7 +214,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
               onMarkDelivered={handleMarkDelivered}
               formSource={forms.find(f => f.id === lead.formId)}
               products={products}
-              states={states}
               isNew={isNewLead(lead.createdAt)}
             />
           ))
@@ -244,8 +238,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                         phone: viewingLead.phone,
                         whatsapp: viewingLead.whatsapp,
                         address: viewingLead.address,
-                        deliveryInstructions: viewingLead.deliveryInstructions,
-                        stateId: viewingLead.stateId
+                        deliveryInstructions: viewingLead.deliveryInstructions
                       });
                     }}
                     className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-emerald-100 transition"
@@ -298,23 +291,6 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                     />
                   ) : (
                     <p className="text-lg font-black text-emerald-600">{viewingLead.whatsapp || 'Not Provided'}</p>
-                  )}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Delivery Location Hub</label>
-                  {isEditingLead ? (
-                    <select 
-                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                      value={editingLeadData.stateId || ''}
-                      onChange={e => setEditingLeadData({...editingLeadData, stateId: e.target.value})}
-                    >
-                      <option value="">-- Choose State Hub --</option>
-                      {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  ) : (
-                    <p className="text-sm font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl inline-block">
-                      {states.find(s => s.id === viewingLead.stateId || s.name === viewingLead.stateId)?.name || viewingLead.stateId || 'Not Assigned / Global'}
-                    </p>
                   )}
                 </div>
                 <div className="md:col-span-2">
@@ -390,15 +366,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl p-12 animate-in zoom-in duration-300">
             <h2 className="text-2xl font-black text-slate-800 mb-2">Fulfillment Routing</h2>
-            <p className="text-slate-500 text-sm mb-10 font-medium">Select the regional hub that will process this lead's delivery.</p>
+            <p className="text-slate-500 text-sm mb-10 font-medium">Confirm converting this lead to an active order.</p>
             <form onSubmit={handleConvert} className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Assigned Hub</label>
-                <select required className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-emerald-500 font-bold" value={convDetails.stateId} onChange={e => setConvDetails({...convDetails, stateId: e.target.value})}>
-                  <option value="">-- Choose State Hub --</option>
-                  {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
               <div className="pt-6">
                 <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 transition active:scale-95">Complete Conversion</button>
                 <button type="button" onClick={() => setShowConvertModal(false)} className="w-full mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cancel</button>

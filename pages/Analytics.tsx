@@ -9,19 +9,14 @@ import {
 
 const Analytics: React.FC = () => {
   const orders = db.getOrders();
-  const states = db.getStates();
 
-  const successRateByState = useMemo(() => {
-    return states.map(s => {
-      const stateOrders = orders.filter(o => o.stateId === s.id);
-      const delivered = stateOrders.filter(o => o.deliveryStatus === DeliveryStatus.DELIVERED).length;
-      return {
-        name: s.name,
-        rate: stateOrders.length > 0 ? (delivered / stateOrders.length) * 100 : 0,
-        total: stateOrders.length
-      };
-    });
-  }, [states, orders]);
+  const deliveryDistribution = useMemo(() => {
+    const statuses = Object.values(DeliveryStatus);
+    return statuses.map(status => ({
+      name: status,
+      count: orders.filter(o => o.deliveryStatus === status).length
+    }));
+  }, [orders]);
 
   // Mock weekly revenue data
   const revenueTrend = [
@@ -66,15 +61,15 @@ const Analytics: React.FC = () => {
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Delivery Success Rate per State (%)</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-6">Delivery Status Distribution</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={successRateByState} layout="vertical">
+              <BarChart data={deliveryDistribution} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} />
+                <XAxis type="number" axisLine={false} tickLine={false} />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} />
                 <Tooltip />
-                <Bar dataKey="rate" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -83,10 +78,14 @@ const Analytics: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-emerald-900 text-white p-6 rounded-2xl">
-          <p className="text-emerald-300 text-xs font-bold uppercase mb-1">Top Performing State</p>
-          <p className="text-2xl font-bold">Lagos Hub</p>
+          <p className="text-emerald-300 text-xs font-bold uppercase mb-1">Overall Success Rate</p>
+          <p className="text-2xl font-bold">
+            {orders.length > 0 
+              ? ((orders.filter(o => o.deliveryStatus === DeliveryStatus.DELIVERED).length / orders.length) * 100).toFixed(1)
+              : '0.0'}%
+          </p>
           <div className="mt-4 flex items-center justify-between">
-            <span className="text-sm">94.2% Success</span>
+            <span className="text-sm">Total Orders: {orders.length}</span>
             <span className="bg-emerald-700 px-2 py-1 rounded text-xs">▲ 12%</span>
           </div>
         </div>

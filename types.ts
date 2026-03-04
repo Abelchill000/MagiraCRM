@@ -1,7 +1,6 @@
 
 export enum UserRole {
   ADMIN = 'Admin',
-  STATE_MANAGER = 'State Manager',
   SALES_AGENT = 'Sales Agent',
   INVENTORY_MANAGER = 'Inventory Manager',
   LOGISTICS_MANAGER = 'Logistics Manager'
@@ -39,20 +38,12 @@ export interface Product {
   batchNumber: string;
   expiryDate: string;
   totalStock: number;
-  stockPerState: Record<string, number>; // stateId -> quantity
   lowStockThreshold: number;
-}
-
-export interface State {
-  id: string;
-  name: string;
-  whatsappGroupLink: string;
 }
 
 export interface LogisticsPartner {
   id: string;
   name: string;
-  stateId: string;
   contactPerson: string;
   phone: string;
 }
@@ -73,7 +64,6 @@ export interface Order {
   whatsapp?: string;
   address: string;
   deliveryInstructions?: string;
-  stateId: string;
   items: OrderItem[];
   totalAmount: number;
   logisticsCost: number;
@@ -87,7 +77,7 @@ export interface Order {
   reminderEnabled?: boolean;
 }
 
-export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'LOCATION' | 'ADDRESS' | 'DELIVERY_INSTRUCTIONS' | 'CUSTOM_TEXT' | 'BENEFITS' | 'TESTIMONIALS' | 'FAQ' | 'IMAGE';
+export type SectionType = 'HEADER' | 'CONTACT' | 'PRODUCTS' | 'ADDRESS' | 'DELIVERY_INSTRUCTIONS' | 'CUSTOM_TEXT' | 'BENEFITS' | 'TESTIMONIALS' | 'FAQ' | 'IMAGE';
 
 export interface FormOption {
   label: string;
@@ -128,7 +118,6 @@ export interface WebLead {
   whatsapp?: string;
   address: string;
   deliveryInstructions?: string;
-  stateId?: string;
   items: Array<{ productId: string; quantity: number }>;
   status: LeadStatus;
   notes: string;
@@ -159,7 +148,6 @@ export interface User {
   phone: string;
   password?: string;
   role: UserRole;
-  stateId?: string;
   isApproved: boolean;
   status: 'pending' | 'approved' | 'rejected';
   registeredAt: string;

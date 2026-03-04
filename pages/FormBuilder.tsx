@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb';
-import { OrderForm, Product, State, FormSection, SectionType, WebLead, LeadStatus, User } from '../types';
+import { OrderForm, Product, FormSection, SectionType, WebLead, LeadStatus, User } from '../types';
 
 const PACKAGES = [
   { label: '1 BOTTLE of 500ml @ ₦20,000', qty: 1, price: 20000 },
@@ -15,24 +15,12 @@ const PACKAGES = [
   { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Bonus)', qty: 30, price: 500000 },
 ];
 
-const NIGERIA_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
-  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", 
-  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", 
-  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", 
-  "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT Abuja"
-];
-
 const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   HEADER: { label: 'Order Your Magira Shots', content: 'Fresh organic health shots delivered to your doorstep.' },
   CONTACT: { label: 'Enter Shipping Info' },
   PRODUCTS: { 
     label: 'Choose Your Package',
     options: PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }), price: p.price, qty: p.qty }))
-  },
-  LOCATION: { 
-    label: 'Your Delivery State',
-    options: NIGERIA_STATES.map(s => ({ label: s, value: s }))
   },
   ADDRESS: { label: 'Street Address', content: 'Full Delivery Address' },
   DELIVERY_INSTRUCTIONS: { label: 'Delivery Instructions', content: 'e.g. Leave at the gate, Call before arrival, etc.' },
@@ -58,7 +46,6 @@ const FormBuilder: React.FC = () => {
     phone: '',
     whatsapp: '',
     package: '',
-    state: '',
     address: '',
     deliveryInstructions: ''
   });
@@ -130,8 +117,6 @@ const FormBuilder: React.FC = () => {
       newOptions[optionIdx].value = JSON.stringify({ qty, price });
       newOptions[optionIdx].qty = qty;
       newOptions[optionIdx].price = price;
-    } else if (section.type === 'LOCATION' && field === 'label') {
-      newOptions[optionIdx].value = value;
     }
     
     section.options = newOptions;
@@ -143,7 +128,7 @@ const FormBuilder: React.FC = () => {
     const section = updated[sectionIdx];
     const newOption = section.type === 'PRODUCTS' 
       ? { label: 'New Package', value: JSON.stringify({ qty: 1, price: 0 }), qty: 1, price: 0 }
-      : { label: 'New State', value: 'New State' };
+      : { label: 'New Field', value: 'New Field' };
     
     section.options = [...(section.options || []), newOption];
     setEditingForm({ ...editingForm, sections: updated });
@@ -184,7 +169,6 @@ const FormBuilder: React.FC = () => {
       whatsapp: previewData.whatsapp,
       address: previewData.address,
       deliveryInstructions: previewData.deliveryInstructions,
-      stateId: previewData.state,
       items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty }],
       status: LeadStatus.NEW,
       notes: `Captured from LIVE PREVIEW by ${user.name}`,
@@ -204,14 +188,9 @@ const FormBuilder: React.FC = () => {
     const agentName = (form.assignedToNames && form.assignedToNames.length > 0) ? form.assignedToNames[0] : form.createdBy;
     
     const productsSection = form.sections.find(s => s.type === 'PRODUCTS');
-    const locationSection = form.sections.find(s => s.type === 'LOCATION');
 
     const packageOptions = (productsSection?.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }), price: p.price, qty: p.qty }))).map(opt => 
       `<option value='${opt.value}'>${opt.label}</option>`
-    ).join('\n            ');
-
-    const stateOptions = (locationSection?.options || NIGERIA_STATES.map(s => ({ label: s, value: s }))).map(opt => 
-      `<option value="${opt.value}">${opt.label}</option>`
     ).join('\n            ');
 
     const sectionsHtml = form.sections.map(sec => {
@@ -224,8 +203,6 @@ const FormBuilder: React.FC = () => {
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><input type="text" name="customerName" placeholder="Full Name" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="phone" placeholder="Phone Number (Call)" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; margin-bottom: 12px; font-size: 14px;"><input type="tel" name="whatsapp" placeholder="WhatsApp Number" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-size: 14px;"></div>`;
         case 'PRODUCTS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="packageData" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px; font-weight: 600;"><option value="">-- Choose Ginger Shot Package --</option>${packageOptions}</select></div>`;
-        case 'LOCATION':
-          return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><select name="stateName" required style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; background: white; font-size: 14px;"><option value="">-- Select State --</option>${stateOptions}</select></div>`;
         case 'ADDRESS':
           return `<div style="padding: 0 24px;"><label style="display: block; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">${sec.label}</label><textarea name="address" required rows="2" placeholder="${sec.content || 'Full Delivery Address'}" style="width: 100%; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 12px; box-sizing: border-box; font-family: sans-serif; font-size: 14px;"></textarea></div>`;
         case 'DELIVERY_INSTRUCTIONS':
@@ -286,7 +263,6 @@ const FormBuilder: React.FC = () => {
         whatsapp: rawData.whatsapp || '',
         address: rawData.address || '',
         deliveryInstructions: rawData.deliveryInstructions || '',
-        stateId: rawData.stateName || '',
         agentName: agentName,
         status: 'abandoned',
         lastUpdatedAt: new Date().toISOString(),
@@ -308,7 +284,6 @@ const FormBuilder: React.FC = () => {
             whatsapp: { stringValue: payload.whatsapp },
             address: { stringValue: payload.address },
             deliveryInstructions: { stringValue: payload.deliveryInstructions },
-            stateId: { stringValue: payload.stateId || '' },
             agentName: { stringValue: payload.agentName },
             status: { stringValue: payload.status },
             lastUpdatedAt: { stringValue: payload.lastUpdatedAt },
@@ -351,7 +326,6 @@ const FormBuilder: React.FC = () => {
       whatsapp: rawData.whatsapp || '',
       address: rawData.address,
       deliveryInstructions: rawData.deliveryInstructions || '',
-      stateId: rawData.stateName || '',
       status: 'New Lead',
       notes: 'Captured via Landing Page by ' + agentName,
       createdAt: new Date().toISOString(),
@@ -373,7 +347,6 @@ const FormBuilder: React.FC = () => {
             whatsapp: { stringValue: payload.whatsapp },
             address: { stringValue: payload.address },
             deliveryInstructions: { stringValue: payload.deliveryInstructions },
-            stateId: { stringValue: payload.stateId || '' },
             status: { stringValue: payload.status },
             notes: { stringValue: payload.notes },
             createdAt: { stringValue: payload.createdAt },
@@ -434,7 +407,6 @@ const FormBuilder: React.FC = () => {
       phone: '',
       whatsapp: '',
       package: '',
-      state: '',
       address: '',
       deliveryInstructions: ''
     });
@@ -601,7 +573,7 @@ const FormBuilder: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Essentials</p>
                   <div className="grid grid-cols-1 gap-2">
-                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'LOCATION', 'ADDRESS', 'DELIVERY_INSTRUCTIONS', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ'] as SectionType[]).map(type => (
+                    {(['HEADER', 'IMAGE', 'CONTACT', 'PRODUCTS', 'ADDRESS', 'DELIVERY_INSTRUCTIONS', 'CUSTOM_TEXT', 'BENEFITS', 'TESTIMONIALS', 'FAQ'] as SectionType[]).map(type => (
                       <button key={type} onClick={() => addSection(type)} className="w-full bg-white border border-slate-200 p-3 rounded-xl text-left hover:border-emerald-500 transition-all flex items-center gap-3 group">
                         <span className="bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 w-8 h-8 rounded-lg flex items-center justify-center text-xs">＋</span>
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{type.replace('_', ' ')}</span>
@@ -773,28 +745,6 @@ const FormBuilder: React.FC = () => {
                             </div>
                           </div>
                         )}
-
-                        {section.type === 'LOCATION' && (
-                          <div className="space-y-3 mt-4">
-                            <div className="flex justify-between items-center">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">State Options</label>
-                              <button onClick={() => addOption(idx)} className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest">+ Add State</button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              {(section.options || []).map((opt, optIdx) => (
-                                <div key={optIdx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                  <input 
-                                    className="flex-1 bg-transparent border-none text-xs font-bold focus:ring-0 p-0"
-                                    value={opt.label}
-                                    onChange={e => updateOption(idx, optIdx, 'label', e.target.value)}
-                                    placeholder="State Name"
-                                  />
-                                  <button onClick={() => removeOption(idx, optIdx)} className="text-slate-300 hover:text-red-500 transition">✕</button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -852,15 +802,6 @@ const FormBuilder: React.FC = () => {
                               <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <textarea required placeholder={sec.content || "Address..."} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold resize-none" rows={3} value={previewData.address} onChange={e => setPreviewData({...previewData, address: e.target.value})} />
-                              </div>
-                            );
-                            case 'LOCATION': return (
-                              <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
-                                <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.state} onChange={e => setPreviewData({...previewData, state: e.target.value})}>
-                                  <option value="">-- Select State --</option>
-                                  {(sec.options || NIGERIA_STATES.map(s => ({ label: s, value: s }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
-                                </select>
                               </div>
                             );
                             case 'DELIVERY_INSTRUCTIONS': return (

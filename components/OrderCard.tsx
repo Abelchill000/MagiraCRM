@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Order, DeliveryStatus, UserRole, State } from '../types';
+import { Order, DeliveryStatus, UserRole } from '../types';
 import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, FileText, Trash2, Package, Truck, CreditCard, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -12,7 +12,6 @@ interface OrderCardProps {
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: DeliveryStatus) => void;
   canManageAllOrders: boolean;
-  states: State[];
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({
@@ -22,8 +21,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
   onWhatsApp,
   onDelete,
   onStatusChange,
-  canManageAllOrders,
-  states
+  canManageAllOrders
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -40,8 +38,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
       default: return 'bg-slate-100 text-slate-500';
     }
   };
-
-  const stateName = states.find(s => s.id === order.stateId || s.name === order.stateId)?.name || order.stateId || 'General Network';
 
   return (
     <motion.div 
@@ -105,12 +101,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
         <div className="flex items-center gap-2 text-slate-400">
           <MapPin size={16} />
           <p className="text-sm font-bold truncate">{order.address}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Globe size={14} className="text-blue-500" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
-            Selected State: {stateName}
-          </p>
         </div>
       </div>
 

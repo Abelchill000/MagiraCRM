@@ -1,34 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { db } from '../services/mockDb.ts';
-import { Product, UserRole, State } from '../types.ts';
+import { Product, UserRole } from '../types.ts';
 
 const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const user = db.getCurrentUser();
   const [products, setProducts] = useState<Product[]>(db.getProducts());
-  const [states] = useState<State[]>(db.getStates());
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'low-stock'>('all');
   
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
-
-  const [transferModal, setTransferModal] = useState<{ isOpen: boolean, productId: string | null }>({
-    isOpen: false,
-    productId: null
-  });
-
-  const [hubActionModal, setHubActionModal] = useState<{ 
-    isOpen: boolean, 
-    productId: string | null, 
-    stateId: string | null,
-    action: 'add' | 'subtract' | 'clear' | null
-  }>({
-    isOpen: false,
-    productId: null,
-    stateId: null,
-    action: null
-  });
 
   // Access check
   const isInventoryManager = user?.role === UserRole.INVENTORY_MANAGER || user?.email === 'iconfidence909@gmail.com';
@@ -39,10 +21,9 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            p.sku.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const hasAnyLowHub = Object.values(p.stockPerState).some(qty => (qty as number) <= 10);
       const isLowCentral = p.totalStock <= 10;
       
-      const matchesFilter = filter === 'all' || isLowCentral || hasAnyLowHub;
+      const matchesFilter = filter === 'all' || isLowCentral;
       return matchesSearch && matchesFilter;
     });
   }, [products, searchTerm, filter]);
@@ -60,7 +41,6 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
       batchNumber: editingProduct.batchNumber || '',
       expiryDate: editingProduct.expiryDate || '',
       totalStock: Number(editingProduct.totalStock) || 0,
-      stockPerState: editingProduct.stockPerState || {},
       lowStockThreshold: 10,
     };
 
@@ -79,55 +59,12 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     }
   };
 
-  const handleTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const stateId = formData.get('stateId') as string;
-    const qty = Number(formData.get('quantity'));
-    
-    if (transferModal.productId && stateId && qty > 0) {
-      const success = await db.transferStock(transferModal.productId, stateId, qty);
-      if (success) {
-        setProducts([...db.getProducts()]);
-        setTransferModal({ isOpen: false, productId: null });
-      } else {
-        alert("Insufficient central stock!");
-      }
-    }
-  };
-
-  const handleHubAction = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const qtyInput = Number(formData.get('quantity'));
-    
-    if (hubActionModal.productId && hubActionModal.stateId && hubActionModal.action) {
-      const p = products.find(prod => prod.id === hubActionModal.productId);
-      if (!p) return;
-      
-      const currentQty = p.stockPerState[hubActionModal.stateId] || 0;
-      let newQty = currentQty;
-
-      if (hubActionModal.action === 'add') {
-        newQty += qtyInput;
-      } else if (hubActionModal.action === 'subtract') {
-        newQty = Math.max(0, currentQty - qtyInput);
-      } else if (hubActionModal.action === 'clear') {
-        newQty = 0;
-      }
-
-      db.updateStateHubStock(hubActionModal.productId, hubActionModal.stateId, newQty);
-      setProducts([...db.getProducts()]);
-      setHubActionModal({ isOpen: false, productId: null, stateId: null, action: null });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Inventory Terminal</h1>
-          <p className="text-slate-500 text-sm font-medium">Global stock distribution and hub-level inventory controls.</p>
+          <p className="text-slate-500 text-sm font-medium">Global stock distribution and inventory controls.</p>
         </div>
         <div className="flex items-center gap-2">
           {isAdminOrManager && (
@@ -217,12 +154,6 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                   </div>
 
                   <div className="flex gap-2">
-                    <button 
-                      onClick={() => setTransferModal({ isOpen: true, productId: product.id })}
-                      className="bg-slate-900 text-white px-8 py-4 rounded-[1.25rem] text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition active:scale-95"
-                    >
-                      Dispatch Hubs
-                    </button>
                     {isAdminOrManager && (
                       <button 
                         onClick={() => { setEditingProduct(product); setShowModal(true); }}
@@ -232,56 +163,6 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                       </button>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-100/30 border-t border-slate-100 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Regional Physical Inventory</p>
-                  <p className="text-[9px] font-black text-emerald-600/60 uppercase tracking-widest italic">Live from Hub Repositories</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {states.map(s => {
-                    const qty = product.stockPerState[s.id] || 0;
-                    const isHubLow = qty <= 10;
-                    return (
-                      <div key={s.id} className={`bg-white p-5 rounded-[1.5rem] border shadow-sm relative group transition-all duration-300 ${isHubLow ? 'border-red-100 bg-red-50/10' : 'border-slate-100 hover:border-emerald-200'}`}>
-                        <div className="flex items-start justify-between mb-3">
-                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight truncate mr-2">{s.name}</span>
-                          {isHubLow && <span title="Critical Regional Stock" className="text-red-500 animate-pulse">⚠️</span>}
-                        </div>
-                        <div className="flex items-end justify-between">
-                          <span className={`text-3xl font-black tracking-tighter ${isHubLow ? 'text-red-600' : 'text-slate-800'}`}>{qty}</span>
-                          
-                          {isAdminOrManager && (
-                            <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-                              <button 
-                                onClick={() => setHubActionModal({ isOpen: true, productId: product.id, stateId: s.id, action: 'add' })}
-                                className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black shadow-sm hover:bg-emerald-600 hover:text-white transition"
-                                title="Add Hub Stock"
-                              >
-                                ＋
-                              </button>
-                              <button 
-                                onClick={() => setHubActionModal({ isOpen: true, productId: product.id, stateId: s.id, action: 'subtract' })}
-                                className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs font-black shadow-sm hover:bg-amber-600 hover:text-white transition"
-                                title="Subtract Hub Stock"
-                              >
-                                －
-                              </button>
-                              <button 
-                                onClick={() => { if(confirm(`Confirm: Reset stock to 0 for ${s.name}?`)) db.updateStateHubStock(product.id, s.id, 0); setProducts([...db.getProducts()]); }}
-                                className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xs font-black shadow-sm hover:bg-red-600 hover:text-white transition"
-                                title="Clear Hub Stock"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             </div>
@@ -294,76 +175,6 @@ const Products: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           </div>
         )}
       </div>
-
-      {transferModal.isOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[80]">
-          <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl p-12 animate-in fade-in zoom-in duration-300">
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Regional Dispatch</h2>
-            <p className="text-slate-500 text-sm mb-10 font-medium">Provision stock from the central warehouse to a state hub.</p>
-            
-            <form onSubmit={handleTransfer} className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Destination Hub</label>
-                <select name="stateId" required className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-emerald-500 font-bold appearance-none">
-                  <option value="">Choose State Hub...</option>
-                  {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Transfer Volume</label>
-                <input name="quantity" required type="number" min="1" className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-emerald-500 font-black text-xl" placeholder="0" />
-              </div>
-              <div className="flex flex-col gap-3 pt-6">
-                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-5 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 transition-all active:scale-95">
-                  Confirm Dispatch
-                </button>
-                <button type="button" onClick={() => setTransferModal({ isOpen: false, productId: null })} className="w-full py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest">
-                  Cancel Request
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {hubActionModal.isOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[90]">
-          <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl p-12 animate-in fade-in zoom-in duration-300">
-            <div className="flex items-center gap-3 text-emerald-600 mb-4">
-              <span className="text-2xl">📦</span>
-              <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">
-                {hubActionModal.action === 'add' ? 'Increase Hub Stock' : hubActionModal.action === 'subtract' ? 'Decrease Hub Stock' : 'Clear Hub Stock'}
-              </h2>
-            </div>
-            <p className="text-slate-500 text-sm mb-10 font-medium">
-              Updating physical inventory levels at the <strong className="text-slate-900">{states.find(s => s.id === hubActionModal.stateId)?.name}</strong> regional repository.
-            </p>
-            
-            <form onSubmit={handleHubAction} className="space-y-6">
-              {hubActionModal.action !== 'clear' && (
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Quantity (Units)</label>
-                  <input name="quantity" required type="number" min="1" autoFocus className="w-full bg-slate-50 border-none rounded-2xl px-6 py-5 focus:ring-2 focus:ring-emerald-500 font-black text-2xl text-center" placeholder="0" />
-                </div>
-              )}
-              {hubActionModal.action === 'clear' && (
-                <div className="bg-red-50 p-6 rounded-2xl text-red-700 text-xs font-black flex items-center gap-4 border border-red-100">
-                   <span className="text-2xl">⚠️</span>
-                   <p className="leading-relaxed">This action will reset the regional hub stock to zero units immediately. Please confirm verification.</p>
-                </div>
-              )}
-              <div className="flex flex-col gap-3 pt-6">
-                <button type="submit" className={`w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl transition-all text-sm text-white active:scale-95 ${hubActionModal.action === 'add' ? 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700' : hubActionModal.action === 'subtract' ? 'bg-amber-600 shadow-amber-100 hover:bg-amber-700' : 'bg-red-600 shadow-red-100 hover:bg-red-700'}`}>
-                  {hubActionModal.action === 'add' ? 'Add to Registry' : hubActionModal.action === 'subtract' ? 'Subtract from Registry' : 'Wipe Registry Data'}
-                </button>
-                <button type="button" onClick={() => setHubActionModal({ isOpen: false, productId: null, stateId: null, action: null })} className="w-full py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest">
-                  Cancel Adjustment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[80]">
