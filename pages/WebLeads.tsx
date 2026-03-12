@@ -118,9 +118,10 @@ YES
     
     const orderItems: OrderItem[] = selectedLead.items.map(item => {
       const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
-      const unitPrice = item.priceAtCapture 
-        ? (item.priceAtCapture / item.quantity) 
-        : (p?.sellingPrice || 0);
+      const capturedPrice = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
+      const unitPrice = (capturedPrice && capturedPrice > 0)
+        ? (capturedPrice / item.quantity) 
+        : (p?.sellingPrice || 20000);
 
       return {
         productId: p?.id || item.productId,

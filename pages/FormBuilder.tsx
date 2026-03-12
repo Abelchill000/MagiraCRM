@@ -365,7 +365,7 @@ const FormBuilder: React.FC = () => {
             items: {
               arrayValue: {
                 values: payload.items.map(i => ({
-                  mapValue: { fields: { productId: { stringValue: i.productId }, quantity: { integerValue: i.quantity }, priceAtCapture: { doubleValue: i.priceAtCapture || 0 }, packageLabel: { stringValue: i.packageLabel || '' } } }
+                  mapValue: { fields: { productId: { stringValue: i.productId }, quantity: { integerValue: i.quantity.toString() }, priceAtCapture: { doubleValue: i.priceAtCapture || 0 }, packageLabel: { stringValue: i.packageLabel || '' } } }
                 }))
               }
             }
@@ -441,7 +441,7 @@ const FormBuilder: React.FC = () => {
                   mapValue: {
                     fields: {
                       productId: { stringValue: i.productId },
-                      quantity: { integerValue: i.quantity },
+                      quantity: { integerValue: i.quantity.toString() },
                       priceAtCapture: { doubleValue: i.priceAtCapture || 0 },
                       packageLabel: { stringValue: i.packageLabel || '' }
                     }
