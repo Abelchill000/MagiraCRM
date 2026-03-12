@@ -123,9 +123,11 @@ const FormBuilder: React.FC = () => {
     if (section.type === 'PRODUCTS') {
       const qty = field === 'qty' ? Number(value) : newOptions[optionIdx].qty;
       const price = field === 'price' ? Number(value) : newOptions[optionIdx].price;
-      newOptions[optionIdx].value = JSON.stringify({ qty, price });
+      const label = field === 'label' ? value : newOptions[optionIdx].label;
+      newOptions[optionIdx].value = JSON.stringify({ qty, price, label });
       newOptions[optionIdx].qty = qty;
       newOptions[optionIdx].price = price;
+      newOptions[optionIdx].label = label;
     }
     
     section.options = newOptions;
@@ -136,7 +138,7 @@ const FormBuilder: React.FC = () => {
     const updated = [...(editingForm?.sections || [])];
     const section = updated[sectionIdx];
     const newOption = section.type === 'PRODUCTS' 
-      ? { label: 'New Package', value: JSON.stringify({ qty: 1, price: 0 }), qty: 1, price: 0 }
+      ? { label: 'New Package', value: JSON.stringify({ qty: 1, price: 0, label: 'New Package' }), qty: 1, price: 0 }
       : { label: 'New Field', value: 'New Field' };
     
     section.options = [...(section.options || []), newOption];
@@ -186,8 +188,15 @@ const FormBuilder: React.FC = () => {
 
     setIsSubmittingPreview(true);
 
-    let pkg = { qty: 1, price: 0 };
-    try { pkg = JSON.parse(previewData.package); } catch(err) {}
+    let pkg = { qty: 1, price: 0, label: '' };
+    try { 
+      const parsed = JSON.parse(previewData.package);
+      pkg = { 
+        qty: parsed.qty || 1, 
+        price: parsed.price || 0, 
+        label: parsed.label || '' 
+      };
+    } catch(err) {}
 
     const lead: WebLead = {
       id: 'L-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
@@ -198,7 +207,7 @@ const FormBuilder: React.FC = () => {
       address: previewData.address,
       stateName: previewData.stateName,
       deliveryInstructions: previewData.deliveryInstructions,
-      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty, priceAtCapture: pkg.price }],
+      items: [{ productId: 'GINGER-SHOT-500ML', quantity: pkg.qty, priceAtCapture: pkg.price, packageLabel: pkg.label }],
       status: LeadStatus.NEW,
       notes: `Captured from LIVE PREVIEW by ${user.name}`,
       createdAt: new Date().toISOString(),
@@ -218,9 +227,10 @@ const FormBuilder: React.FC = () => {
     
     const productsSection = form.sections.find(s => s.type === 'PRODUCTS');
 
-    const packageOptions = (productsSection?.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }), price: p.price, qty: p.qty }))).map(opt => 
-      `<option value='${opt.value}'>${opt.label}</option>`
-    ).join('\n            ');
+    const packageOptions = (productsSection?.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }), price: p.price, qty: p.qty }))).map(opt => {
+      const value = opt.value.includes('"label":') ? opt.value : JSON.stringify({ qty: opt.qty, price: opt.price, label: opt.label });
+      return `<option value='${value}'>${opt.label}</option>`;
+    }).join('\n            ');
 
     const sectionsHtml = form.sections.map(sec => {
       switch (sec.type) {
@@ -842,7 +852,7 @@ const FormBuilder: React.FC = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.package} onChange={e => setPreviewData({...previewData, package: e.target.value})}>
                                   <option value="">Choose Package...</option>
-                                  {(sec.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }) }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
+                                  {(sec.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }) }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
                                 </select>
                               </div>
                             );
