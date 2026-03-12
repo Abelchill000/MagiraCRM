@@ -33,11 +33,15 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const cart = showConvertModal;
     const items: OrderItem[] = (cart.items || []).map(i => {
       const p = products.find(prod => prod.id === i.productId || prod.name.toLowerCase().includes('ginger'));
+      const unitPrice = i.priceAtCapture 
+        ? (i.priceAtCapture / i.quantity) 
+        : (p?.sellingPrice || 0);
+
       return {
         productId: i.productId,
         productName: p?.name || 'Ginger Shot Recovery',
         quantity: i.quantity,
-        priceAtOrder: p?.sellingPrice || 20000,
+        priceAtOrder: unitPrice,
         costAtOrder: p?.costPrice || 5000
       };
     });

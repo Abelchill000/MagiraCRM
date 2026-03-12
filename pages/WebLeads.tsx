@@ -85,7 +85,9 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const copyLeadDetails = (lead: WebLead) => {
     const itemsText = lead.items.map(i => {
       const p = products.find(prod => prod.id === i.productId);
-      return `${p?.name || i.productId} x${i.quantity} = ${(i.priceAtCapture || p?.sellingPrice || 0).toLocaleString()}`;
+      const productName = i.packageLabel || p?.name || i.productId;
+      const totalPrice = i.priceAtCapture || ((p?.sellingPrice || 0) * i.quantity);
+      return `${productName} x${i.quantity} = ${totalPrice.toLocaleString()}`;
     }).join('\n');
 
     const text = `Name
@@ -101,7 +103,8 @@ ${lead.address}
 Choose Product
 ${itemsText}
 Are you ready for the delivery?
-YES`.trim();
+YES
+👤 Processed By: ${lead.agentName || 'System'}`.trim();
 
     navigator.clipboard.writeText(text);
     alert('Lead details copied to clipboard!');
@@ -115,26 +118,20 @@ YES`.trim();
     
     const orderItems: OrderItem[] = selectedLead.items.map(item => {
       const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
+      const unitPrice = item.priceAtCapture 
+        ? (item.priceAtCapture / item.quantity) 
+        : (p?.sellingPrice || 0);
+
       return {
         productId: p?.id || item.productId,
-        productName: p?.name || 'Ginger Shot (500ml)',
+        productName: item.packageLabel || p?.name || 'Ginger Shot (500ml)',
         quantity: item.quantity,
-        priceAtOrder: p?.sellingPrice || 20000, 
+        priceAtOrder: unitPrice, 
         costAtOrder: p?.costPrice || 5000
       };
     });
 
-    const packagePrices: Record<number, number> = {
-      1: 20000, 2: 38000, 3: 55000, 6: 90000, 8: 126000, 10: 165000, 15: 249500, 18: 300000, 30: 500000
-    };
-
-    let total = 0;
-    if (isSpecialPackage && selectedLead.items.length === 1) {
-      const qty = selectedLead.items[0].quantity;
-      total = packagePrices[qty] || (orderItems[0].priceAtOrder * qty);
-    } else {
-      total = orderItems.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0);
-    }
+    const total = orderItems.reduce((acc, i) => acc + (i.priceAtOrder * i.quantity), 0);
 
     const order: Order = {
       id: 'ORD-' + Math.random().toString(36).substr(2, 6).toUpperCase(),

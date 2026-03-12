@@ -120,7 +120,7 @@ export interface WebLead {
   address: string;
   stateName?: string;
   deliveryInstructions?: string;
-  items: Array<{ productId: string; quantity: number; priceAtCapture?: number }>;
+  items: Array<{ productId: string; quantity: number; priceAtCapture?: number; packageLabel?: string }>;
   status: LeadStatus;
   notes: string;
   createdAt: string;
@@ -136,7 +136,7 @@ export interface AbandonedCart {
   address?: string;
   stateName?: string;
   deliveryInstructions?: string;
-  items?: Array<{ productId: string; quantity: number }>;
+  items?: Array<{ productId: string; quantity: number; priceAtCapture?: number; packageLabel?: string }>;
   createdAt: string;
   lastUpdatedAt: string;
   agentName: string;

@@ -201,7 +201,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const copyReceiptText = (order: Order) => {
-    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${i.priceAtOrder.toLocaleString()}`).join('\n');
+    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${(i.priceAtOrder * i.quantity).toLocaleString()}`).join('\n');
 
     const text = `Name
 ${order.customerName}
@@ -216,7 +216,8 @@ ${order.address}
 Choose Product
 ${itemsText}
 Are you ready for the delivery?
-YES`.trim();
+YES
+👤 Processed By: ${order.createdBy || 'System'}`.trim();
 
     navigator.clipboard.writeText(text);
     alert('Magira Official Receipt copied to clipboard!');
