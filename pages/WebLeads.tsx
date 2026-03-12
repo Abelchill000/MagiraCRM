@@ -83,19 +83,26 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   };
 
   const copyLeadDetails = (lead: WebLead) => {
-    const text = `
-🌿 MAGIRA LEAD CAPTURE
--------------------------
-👤 Name: ${lead.customerName}
-📞 Phone: ${lead.phone}
-📲 WhatsApp: ${lead.whatsapp || 'N/A'}
-📍 Address: ${lead.address}
-🗺️ State: ${lead.stateName || 'N/A'}
-📝 Instructions: ${lead.deliveryInstructions || 'None'}
-📅 Captured: ${new Date(lead.createdAt).toLocaleString()}
-👤 Agent: ${lead.agentName || 'Network'}
--------------------------
-`.trim();
+    const itemsText = lead.items.map(i => {
+      const p = products.find(prod => prod.id === i.productId);
+      return `${p?.name || i.productId} x${i.quantity} = ${(i.priceAtCapture || p?.sellingPrice || 0).toLocaleString()}`;
+    }).join('\n');
+
+    const text = `Name
+${lead.customerName}
+Phone Number
+${lead.phone}
+WhatsApp Number
+${lead.whatsapp || lead.phone}
+Select State
+${lead.stateName || 'N/A'}
+Complete Address
+${lead.address}
+Choose Product
+${itemsText}
+Are you ready for the delivery?
+YES`.trim();
+
     navigator.clipboard.writeText(text);
     alert('Lead details copied to clipboard!');
   };

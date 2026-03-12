@@ -201,36 +201,25 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const copyReceiptText = (order: Order) => {
-    const itemsText = order.items.map(i => `• ${i.productName} x${i.quantity} @ ₦${i.priceAtOrder.toLocaleString()}`).join('\n');
-    const orderDate = new Date(order.createdAt).toLocaleDateString('en-NG', { dateStyle: 'long' });
+    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${i.priceAtOrder.toLocaleString()}`).join('\n');
 
-    const text = `🌿 MAGIRA OFFICIAL RECEIPT
-----------------------------
-📅 Date: ${orderDate}
-🆔 Order ID: ${order.id}
-👤 Processed By: ${order.createdBy}
-----------------------------
-📝 CUSTOMER DETAILS
-Name: ${order.customerName}
-Phone: ${order.phone}
-${order.whatsapp ? `WhatsApp: ${order.whatsapp}\n` : ''}Address: ${order.address}
-${order.stateName ? `State: ${order.stateName}\n` : ''}----------------------------
-📦 ORDER ITEMS
+    const text = `Name
+${order.customerName}
+Phone Number
+${order.phone}
+WhatsApp Number
+${order.whatsapp || order.phone}
+Select State
+${order.stateName || 'N/A'}
+Complete Address
+${order.address}
+Choose Product
 ${itemsText}
-----------------------------
-💰 FINANCIAL SUMMARY
-Main Value: ₦${order.totalAmount.toLocaleString()}
-Payment Mode: ${order.paymentStatus}
-Status: ${order.deliveryStatus}
-----------------------------
-📍 TRACKING & NOTES
-Tracking ID: ${order.trackingId}
-${order.deliveryInstructions ? `Instructions: ${order.deliveryInstructions}\n` : ''}
-Thank you for choosing Magira. 
-Stay Healthy, Stay Energized!`.trim();
+Are you ready for the delivery?
+YES`.trim();
 
     navigator.clipboard.writeText(text);
-    alert('Professional receipt copied to clipboard!');
+    alert('Magira Official Receipt copied to clipboard!');
   };
 
   const shareWhatsApp = (order: Order) => {
