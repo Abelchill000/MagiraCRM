@@ -380,10 +380,22 @@ YES
                   <div className="flex flex-wrap gap-2 mt-2">
                     {viewingLead.items.map((item, i) => (
                       <span key={i} className="bg-white border border-slate-200 text-slate-800 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm">
-                        {item.productId.replace(/-/g, ' ')} × {item.quantity}
+                        {item.packageLabel || item.productId.replace(/-/g, ' ')} × {item.quantity}
                       </span>
                     ))}
                   </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Estimated Lead Value</label>
+                  <p className="text-2xl font-black text-slate-900">₦{viewingLead.items.reduce((acc, item) => {
+                    const price = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
+                    if (price && price > 0) return acc + price;
+                    if (item.packageLabel) {
+                      const match = item.packageLabel.match(/₦([\d,]+)/);
+                      if (match) return acc + parseInt(match[1].replace(/,/g, ''));
+                    }
+                    return acc + (item.quantity * 20000);
+                  }, 0).toLocaleString()}</p>
                 </div>
               </div>
               <div className="pt-6 border-t border-slate-100">

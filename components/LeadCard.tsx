@@ -38,6 +38,13 @@ const LeadCard: React.FC<LeadCardProps> = ({
     if (price !== undefined && price > 0) {
       return acc + price;
     }
+    // Fallback: Try to extract price from packageLabel
+    if (item.packageLabel) {
+      const match = item.packageLabel.match(/₦([\d,]+)/);
+      if (match) {
+        return acc + parseInt(match[1].replace(/,/g, ''));
+      }
+    }
     const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
     return acc + (p ? p.sellingPrice * item.quantity : 20000 * item.quantity);
   }, 0);

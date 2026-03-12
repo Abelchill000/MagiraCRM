@@ -39,6 +39,16 @@ const OrderCard: React.FC<OrderCardProps> = ({
     }
   };
 
+  const calculateOrderTotal = (order: Order) => {
+    return order.items.reduce((acc, item) => {
+      const namePrice = item.productName.match(/₦([\d,]+)/);
+      if (namePrice) {
+        return acc + parseInt(namePrice[1].replace(/,/g, ''));
+      }
+      return acc + (item.priceAtOrder * item.quantity);
+    }, 0);
+  };
+
   return (
     <motion.div 
       layout
@@ -58,7 +68,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-black text-slate-900">₦{order.totalAmount.toLocaleString()}</p>
+          <p className="text-2xl font-black text-slate-900">₦{calculateOrderTotal(order).toLocaleString()}</p>
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Order Total</p>
         </div>
       </div>

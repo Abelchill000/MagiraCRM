@@ -200,8 +200,20 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     db.updateOrderStatus(orderId, status, extra);
   };
 
+  const calculateItemTotal = (item: OrderItem) => {
+    const namePrice = item.productName.match(/₦([\d,]+)/);
+    if (namePrice) {
+      return parseInt(namePrice[1].replace(/,/g, ''));
+    }
+    return item.priceAtOrder * item.quantity;
+  };
+
+  const calculateOrderTotal = (order: Order) => {
+    return order.items.reduce((acc, item) => acc + calculateItemTotal(item), 0);
+  };
+
   const copyReceiptText = (order: Order) => {
-    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${(i.priceAtOrder * i.quantity).toLocaleString()}`).join('\n');
+    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${calculateItemTotal(i).toLocaleString()}`).join('\n');
 
     const text = `Name
 ${order.customerName}
@@ -429,15 +441,18 @@ YES
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Package Details</label>
                   <div className="mt-3 space-y-2">
-                    {viewingOrder.items.map((item, i) => (
-                      <div key={i} className="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                        <span className="text-xs font-black uppercase text-slate-800">{item.productName} × {item.quantity}</span>
-                        <span className="text-xs font-black text-slate-500">₦{(item.priceAtOrder * item.quantity).toLocaleString()}</span>
-                      </div>
-                    ))}
+                    {viewingOrder.items.map((item, i) => {
+                      const itemTotal = calculateItemTotal(item);
+                      return (
+                        <div key={i} className="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                          <span className="text-xs font-black uppercase text-slate-800">{item.productName} × {item.quantity}</span>
+                          <span className="text-xs font-black text-slate-500">₦{itemTotal.toLocaleString()}</span>
+                        </div>
+                      );
+                    })}
                     <div className="flex justify-between pt-4 border-t border-slate-100">
                       <span className="text-xs font-black text-slate-400 uppercase">Grand Total</span>
-                      <span className="text-xl font-black text-slate-900">₦{viewingOrder.totalAmount.toLocaleString()}</span>
+                      <span className="text-xl font-black text-slate-900">₦{calculateOrderTotal(viewingOrder).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
