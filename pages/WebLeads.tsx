@@ -86,8 +86,19 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const itemsText = lead.items.map(i => {
       const p = products.find(prod => prod.id === i.productId);
       const productName = i.packageLabel || p?.name || i.productId;
-      const totalPrice = i.priceAtCapture || ((p?.sellingPrice || 0) * i.quantity);
-      return `${productName} x${i.quantity} = ${totalPrice.toLocaleString()}`;
+      
+      let itemPrice = typeof i.priceAtCapture === 'string' ? parseFloat(i.priceAtCapture) : i.priceAtCapture;
+      if (!itemPrice || itemPrice === 0) {
+        if (i.packageLabel) {
+          const match = i.packageLabel.match(/₦([\d,]+)/);
+          if (match) itemPrice = parseInt(match[1].replace(/,/g, ''));
+        }
+      }
+      if (!itemPrice || itemPrice === 0) {
+        itemPrice = (p?.sellingPrice || 20000) * i.quantity;
+      }
+
+      return `${productName} x${i.quantity} = ${itemPrice.toLocaleString()}`;
     }).join('\n');
 
     const text = `Name
@@ -118,7 +129,15 @@ YES
     
     const orderItems: OrderItem[] = selectedLead.items.map(item => {
       const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
-      const capturedPrice = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
+      
+      let capturedPrice = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
+      if (!capturedPrice || capturedPrice === 0) {
+        if (item.packageLabel) {
+          const match = item.packageLabel.match(/₦([\d,]+)/);
+          if (match) capturedPrice = parseInt(match[1].replace(/,/g, ''));
+        }
+      }
+
       const unitPrice = (capturedPrice && capturedPrice > 0)
         ? (capturedPrice / item.quantity) 
         : (p?.sellingPrice || 20000);

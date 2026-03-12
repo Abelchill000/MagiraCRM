@@ -33,7 +33,15 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const cart = showConvertModal;
     const items: OrderItem[] = (cart.items || []).map(i => {
       const p = products.find(prod => prod.id === i.productId || prod.name.toLowerCase().includes('ginger'));
-      const capturedPrice = typeof i.priceAtCapture === 'string' ? parseFloat(i.priceAtCapture) : i.priceAtCapture;
+      
+      let capturedPrice = typeof i.priceAtCapture === 'string' ? parseFloat(i.priceAtCapture) : i.priceAtCapture;
+      if (!capturedPrice || capturedPrice === 0) {
+        if (i.packageLabel) {
+          const match = i.packageLabel.match(/₦([\d,]+)/);
+          if (match) capturedPrice = parseInt(match[1].replace(/,/g, ''));
+        }
+      }
+
       const unitPrice = (capturedPrice && capturedPrice > 0)
         ? (capturedPrice / i.quantity) 
         : (p?.sellingPrice || 20000);
