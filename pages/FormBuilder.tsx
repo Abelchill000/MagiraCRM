@@ -15,6 +15,22 @@ const PACKAGES = [
   { label: '30 BOTTLES of 500ml @ ₦500,000 (Get 5 Bonus)', qty: 30, price: 500000 },
 ];
 
+const UDO_PACKAGES = [
+  { label: '2 BOTTLES of 500ml @ ₦36,000', qty: 2, price: 36000 },
+  { label: '3 BOTTLES of 500ml @ ₦55,000', qty: 3, price: 55000 },
+  { label: '6 BOTTLES of 500ml @ ₦90,000', qty: 6, price: 90000 },
+  { label: '8 BOTTLES of 500ml @ ₦126,000', qty: 8, price: 126000 },
+  { label: '10 BOTTLES of 500ml @ ₦165,000 (Get 1 Bonus)', qty: 10, price: 165000 },
+  { label: '15 BOTTLES of 500ml @ ₦249,500 (Get 2 Bonus)', qty: 15, price: 249500 },
+];
+
+const getPackagesForAgent = (name?: string, email?: string) => {
+  if (name === 'Udo' || email === 'abelchill000@gmail.com') {
+    return UDO_PACKAGES;
+  }
+  return PACKAGES;
+};
+
 const NIGERIA_STATES = [
   'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta',
   'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT - Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina',
@@ -98,10 +114,22 @@ const FormBuilder: React.FC = () => {
   };
 
   const addSection = (type: SectionType) => {
+    let defaults = { ...SECTION_DEFAULTS[type] };
+    
+    if (type === 'PRODUCTS') {
+      const agentPackages = getPackagesForAgent(user?.name, user?.email);
+      defaults.options = agentPackages.map(p => ({ 
+        label: p.label, 
+        value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }), 
+        price: p.price, 
+        qty: p.qty 
+      }));
+    }
+
     const newSection: FormSection = {
       id: 'sec-' + Math.random().toString(36).substr(2, 5),
       type,
-      ...SECTION_DEFAULTS[type]
+      ...defaults
     };
     const currentSections = editingForm?.sections || [];
     setEditingForm({ ...editingForm, sections: [...currentSections, newSection] });
@@ -227,7 +255,8 @@ const FormBuilder: React.FC = () => {
     
     const productsSection = form.sections.find(s => s.type === 'PRODUCTS');
 
-    const packageOptions = (productsSection?.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }), price: p.price, qty: p.qty }))).map(opt => {
+    const agentPackages = getPackagesForAgent(agentName);
+    const packageOptions = (productsSection?.options || agentPackages.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }), price: p.price, qty: p.qty }))).map(opt => {
       const value = opt.value.includes('"label":') ? opt.value : JSON.stringify({ qty: opt.qty, price: opt.price, label: opt.label });
       return `<option value='${value}'>${opt.label}</option>`;
     }).join('\n            ');
@@ -847,12 +876,14 @@ const FormBuilder: React.FC = () => {
                                 <input required type="tel" pattern="\\d{11}" title="Please enter exactly 11 digits" placeholder="WhatsApp (11 Digits)" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none" value={previewData.whatsapp} onChange={e => setPreviewData({...previewData, whatsapp: e.target.value})} />
                               </div>
                             );
-                            case 'PRODUCTS': return (
+                            case 'PRODUCTS': 
+                              const agentPackages = getPackagesForAgent(previewForm.assignedToNames?.[0] || previewForm.createdBy);
+                              return (
                               <div key={sec.id} className="px-10 py-8 border-b border-slate-50">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">{sec.label}</label>
                                 <select required className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-sm font-black appearance-none" value={previewData.package} onChange={e => setPreviewData({...previewData, package: e.target.value})}>
                                   <option value="">Choose Package...</option>
-                                  {(sec.options || PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }) }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
+                                  {(sec.options || agentPackages.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }) }))).map((opt, i) => <option key={i} value={opt.value}>{opt.label}</option>)}
                                 </select>
                               </div>
                             );
