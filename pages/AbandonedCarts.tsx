@@ -41,6 +41,11 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           if (match) capturedPrice = parseInt(match[1].replace(/,/g, ''));
         }
       }
+      // Fallback for Agent Udo's special 2-bottle pricing
+      const isUdo = (cart.agentName?.toLowerCase().includes('udo')) || (cart.agentName?.toLowerCase() === 'abelchill000@gmail.com');
+      if ((!capturedPrice || capturedPrice === 0) && isUdo && i.quantity === 2) {
+        capturedPrice = 36000;
+      }
 
       const unitPrice = (capturedPrice && capturedPrice > 0)
         ? (capturedPrice / i.quantity) 

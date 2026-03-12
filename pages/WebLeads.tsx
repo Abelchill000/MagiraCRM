@@ -94,6 +94,11 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
           if (match) itemPrice = parseInt(match[1].replace(/,/g, ''));
         }
       }
+      // Fallback for Agent Udo's 2-bottle special
+      const isUdo = (lead.agentName?.toLowerCase().includes('udo')) || (lead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
+      if ((!itemPrice || itemPrice === 0) && isUdo && i.quantity === 2) {
+        itemPrice = 36000;
+      }
       if (!itemPrice || itemPrice === 0) {
         itemPrice = (p?.sellingPrice || 20000) * i.quantity;
       }
@@ -136,6 +141,11 @@ YES
           const match = item.packageLabel.match(/₦([\d,]+)/);
           if (match) capturedPrice = parseInt(match[1].replace(/,/g, ''));
         }
+      }
+      // Fallback for Agent Udo's special 2-bottle pricing
+      const isUdo = (selectedLead.agentName?.toLowerCase().includes('udo')) || (selectedLead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
+      if ((!capturedPrice || capturedPrice === 0) && isUdo && item.quantity === 2) {
+        capturedPrice = 36000;
       }
 
       const unitPrice = (capturedPrice && capturedPrice > 0)
@@ -412,6 +422,11 @@ YES
                     if (item.packageLabel) {
                       const match = item.packageLabel.match(/₦([\d,]+)/);
                       if (match) return acc + parseInt(match[1].replace(/,/g, ''));
+                    }
+                    // Fallback for Agent Udo's 2-bottle special
+                    const isUdo = (viewingLead.agentName?.toLowerCase().includes('udo')) || (viewingLead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
+                    if (isUdo && item.quantity === 2) {
+                      return acc + 36000;
                     }
                     return acc + (item.quantity * 20000);
                   }, 0).toLocaleString()}</p>

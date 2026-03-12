@@ -38,12 +38,17 @@ const LeadCard: React.FC<LeadCardProps> = ({
     if (price !== undefined && price > 0) {
       return acc + price;
     }
-    // Fallback: Try to extract price from packageLabel
+    // Fallback 1: Try to extract price from packageLabel
     if (item.packageLabel) {
       const match = item.packageLabel.match(/₦([\d,]+)/);
       if (match) {
         return acc + parseInt(match[1].replace(/,/g, ''));
       }
+    }
+    // Fallback 2: Handle Agent Udo's special 2-bottle pricing if label is missing
+    const isUdo = (lead.agentName?.toLowerCase().includes('udo')) || (lead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
+    if (isUdo && item.quantity === 2) {
+      return acc + 36000;
     }
     const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
     return acc + (p ? p.sellingPrice * item.quantity : 20000 * item.quantity);

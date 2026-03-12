@@ -25,7 +25,8 @@ const UDO_PACKAGES = [
 ];
 
 const getPackagesForAgent = (name?: string, email?: string) => {
-  if (name === 'Udo' || email === 'abelchill000@gmail.com') {
+  const isUdo = (name?.toLowerCase().includes('udo')) || (email?.toLowerCase() === 'abelchill000@gmail.com');
+  if (isUdo) {
     return UDO_PACKAGES;
   }
   return PACKAGES;
@@ -43,7 +44,12 @@ const SECTION_DEFAULTS: Record<SectionType, Partial<FormSection>> = {
   CONTACT: { label: 'Enter Shipping Info' },
   PRODUCTS: { 
     label: 'Choose Your Package',
-    options: PACKAGES.map(p => ({ label: p.label, value: JSON.stringify({ qty: p.qty, price: p.price }), price: p.price, qty: p.qty }))
+    options: PACKAGES.map(p => ({ 
+      label: p.label, 
+      value: JSON.stringify({ qty: p.qty, price: p.price, label: p.label }), 
+      price: p.price, 
+      qty: p.qty 
+    }))
   },
   ADDRESS: { label: 'Street Address', content: 'Full Delivery Address' },
   LOCATION: { label: 'Delivery State', content: 'Select State' },

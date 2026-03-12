@@ -45,6 +45,11 @@ const OrderCard: React.FC<OrderCardProps> = ({
       if (namePrice) {
         return acc + parseInt(namePrice[1].replace(/,/g, ''));
       }
+      // Fallback for Agent Udo's special 2-bottle pricing
+      const isUdo = (order.createdBy?.toLowerCase().includes('udo')) || (order.createdBy?.toLowerCase() === 'abelchill000@gmail.com');
+      if (isUdo && item.quantity === 2) {
+        return acc + 36000;
+      }
       return acc + (item.priceAtOrder * item.quantity);
     }, 0);
   };

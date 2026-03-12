@@ -200,20 +200,25 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     db.updateOrderStatus(orderId, status, extra);
   };
 
-  const calculateItemTotal = (item: OrderItem) => {
+  const calculateItemTotal = (item: OrderItem, agentName?: string) => {
     const namePrice = item.productName.match(/₦([\d,]+)/);
     if (namePrice) {
       return parseInt(namePrice[1].replace(/,/g, ''));
+    }
+    // Fallback for Agent Udo's special 2-bottle pricing
+    const isUdo = (agentName?.toLowerCase().includes('udo')) || (agentName?.toLowerCase() === 'abelchill000@gmail.com');
+    if (isUdo && item.quantity === 2) {
+      return 36000;
     }
     return item.priceAtOrder * item.quantity;
   };
 
   const calculateOrderTotal = (order: Order) => {
-    return order.items.reduce((acc, item) => acc + calculateItemTotal(item), 0);
+    return order.items.reduce((acc, item) => acc + calculateItemTotal(item, order.createdBy), 0);
   };
 
   const copyReceiptText = (order: Order) => {
-    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${calculateItemTotal(i).toLocaleString()}`).join('\n');
+    const itemsText = order.items.map(i => `${i.productName} x${i.quantity} = ${calculateItemTotal(i, order.createdBy).toLocaleString()}`).join('\n');
 
     const text = `Name
 ${order.customerName}
@@ -442,7 +447,7 @@ YES
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Package Details</label>
                   <div className="mt-3 space-y-2">
                     {viewingOrder.items.map((item, i) => {
-                      const itemTotal = calculateItemTotal(item);
+                      const itemTotal = calculateItemTotal(item, viewingOrder.createdBy);
                       return (
                         <div key={i} className="flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
                           <span className="text-xs font-black uppercase text-slate-800">{item.productName} × {item.quantity}</span>
