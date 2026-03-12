@@ -39,7 +39,7 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
 
       return {
         productId: i.productId,
-        productName: p?.name || 'Ginger Shot Recovery',
+        productName: i.packageLabel || p?.name || 'Ginger Shot Recovery',
         quantity: i.quantity,
         priceAtOrder: unitPrice,
         costAtOrder: p?.costPrice || 5000
