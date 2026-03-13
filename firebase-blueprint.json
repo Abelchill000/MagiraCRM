@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Sales Agent", "Inventory Manager", "Logistics Manager"] },
+        "isApproved": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "registeredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role", "isApproved", "status"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Inventory product",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "costPrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "batchNumber": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "totalStock": { "type": "number" },
+        "lowStockThreshold": { "type": "number" }
+      },
+      "required": ["name", "sku", "costPrice", "sellingPrice", "totalStock"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Sales order",
+      "type": "object",
+      "properties": {
+        "trackingId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "deliveryStatus": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["trackingId", "customerName", "phone", "address", "totalAmount", "deliveryStatus", "createdAt", "createdBy"]
+    },
+    "Widget": {
+      "title": "Widget",
+      "description": "External website widget",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "config": { "type": "object" },
+        "generatedContent": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["name", "type", "config", "createdAt", "createdBy"]
+    }
+  },
+  "firestore": {
+    "users": { "schema": "User", "description": "User profiles" },
+    "products": { "schema": "Product", "description": "Inventory items" },
+    "orders": { "schema": "Order", "description": "Customer orders" },
+    "widgets": { "schema": "Widget", "description": "Publicly accessible widgets" },
+    "forms": { "schema": "object", "description": "Order forms" },
+    "leads": { "schema": "object", "description": "Web leads" },
+    "abandoned_carts": { "schema": "object", "description": "Abandoned carts" },
+    "ads_budgets": { "schema": "object", "description": "Ad spend tracking" },
+    "logistics": { "schema": "object", "description": "Logistics partners" }
+  }
+}
