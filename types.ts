@@ -144,6 +144,22 @@ export interface AbandonedCart {
   pageUrl?: string;
 }
 
+export enum WidgetType {
+  TESTIMONIAL = 'Testimonial',
+  CONTACT_FORM = 'Contact Form',
+  RECENT_SALES = 'Recent Sales',
+  PRODUCT_SHOWCASE = 'Product Showcase'
+}
+
+export interface Widget {
+  id: string;
+  name: string;
+  type: WidgetType;
+  config: any;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface User {
   id: string;
   name: string;

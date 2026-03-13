@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { 
   Product, LogisticsPartner, Order, User, UserRole, 
-  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget 
+  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget, Widget 
 } from '../types';
 
 const firebaseConfig = {
@@ -39,6 +39,7 @@ class FirebaseDb {
     users: User[];
     abandoned: AbandonedCart[];
     budgets: AdsBudget[];
+    widgets: Widget[];
   } = {
     products: [],
     logistics: [],
@@ -47,7 +48,8 @@ class FirebaseDb {
     leads: [],
     users: [],
     abandoned: [],
-    budgets: []
+    budgets: [],
+    widgets: []
   };
 
   private currentUser: User | null = null;
@@ -94,7 +96,7 @@ class FirebaseDb {
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
-    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets'];
+    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets', 'widgets'];
     
     if (isAdmin) {
       collectionsToSync.push('users');
@@ -239,6 +241,7 @@ class FirebaseDb {
   getLeads() { return [...this.data.leads]; }
   getAbandonedCarts() { return [...this.data.abandoned]; }
   getBudgets() { return [...this.data.budgets]; }
+  getWidgets() { return [...this.data.widgets]; }
 
   async saveProduct(product: Product) {
     const { id, ...rest } = product;
@@ -294,6 +297,13 @@ class FirebaseDb {
     const updates: any = { status };
     if (notes) updates.notes = notes;
     await updateDoc(doc(firestore, 'leads', leadId), updates);
+  }
+  async saveWidget(widget: Widget) {
+    const { id, ...rest } = widget;
+    await setDoc(doc(firestore, 'widgets', id), rest);
+  }
+  async deleteWidget(widgetId: string) {
+    await deleteDoc(doc(firestore, 'widgets', widgetId));
   }
 }
 

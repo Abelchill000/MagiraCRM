@@ -39,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     },
     { id: 'orders', label: 'Orders', icon: '📦', roles: [UserRole.ADMIN, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
     { id: 'formbuilder', label: 'Page Builder', icon: '🧱', roles: [UserRole.ADMIN, UserRole.SALES_AGENT] },
+    { id: 'widgets', label: 'Widgets', icon: '🧩', roles: [UserRole.ADMIN, UserRole.SALES_AGENT] },
     { 
       id: 'logistics', 
       label: 'Logistics', 

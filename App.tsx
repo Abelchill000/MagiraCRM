@@ -15,6 +15,8 @@ import AbandonedCarts from './pages/AbandonedCarts.tsx';
 import UserManagement from './pages/UserManagement.tsx';
 import DatabaseExplorer from './pages/DatabaseExplorer.tsx';
 import AdsBudgetPage from './pages/AdsBudget.tsx';
+import Widgets from './pages/Widgets.tsx';
+import WidgetRenderer from './WidgetRenderer.tsx';
 
 // Components
 import Sidebar from './components/Sidebar.tsx';
@@ -32,6 +34,8 @@ const App: React.FC = () => {
   const [signUpData, setSignUpData] = useState({ name: '', email: '', phone: '', password: '', role: UserRole.SALES_AGENT });
   const [isReady, setIsReady] = useState(db.isAuthReady());
   const prevImpersonating = useRef(db.isImpersonating());
+
+  const isEmbed = window.location.pathname.startsWith('/embed/');
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
@@ -118,6 +122,10 @@ const App: React.FC = () => {
         <p className="text-emerald-900 font-black uppercase tracking-widest text-[10px]">Verifying Magira Access...</p>
       </div>
     );
+  }
+
+  if (isEmbed) {
+    return <WidgetRenderer />;
   }
 
   if (!user || !user.isApproved) {
@@ -271,6 +279,7 @@ const App: React.FC = () => {
       case 'leads': return <WebLeads userRole={user.role} />;
       case 'abandoned': return <AbandonedCarts userRole={user.role} />;
       case 'adsbudget': return <AdsBudgetPage />;
+      case 'widgets': return <Widgets />;
       case 'users': return <UserManagement />;
       case 'database': return <DatabaseExplorer />;
       default: return <Dashboard />;
