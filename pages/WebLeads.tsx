@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/mockDb';
+import { calculateItemTotal } from '../services/pricingUtils';
 import { WebLead, LeadStatus, UserRole, PaymentStatus, DeliveryStatus, Order, OrderItem, OrderForm } from '../types';
 
 import LeadCard from '../components/LeadCard';
@@ -86,22 +87,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const itemsText = lead.items.map(i => {
       const p = products.find(prod => prod.id === i.productId);
       const productName = i.packageLabel || p?.name || i.productId;
-      
-      let itemPrice = typeof i.priceAtCapture === 'string' ? parseFloat(i.priceAtCapture) : i.priceAtCapture;
-      if (!itemPrice || itemPrice === 0) {
-        if (i.packageLabel) {
-          const match = i.packageLabel.match(/₦([\d,]+)/);
-          if (match) itemPrice = parseInt(match[1].replace(/,/g, ''));
-        }
-      }
-      // Fallback for Agent Udo's 2-bottle special
-      const isUdo = (lead.agentName?.toLowerCase().includes('udo')) || (lead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
-      if ((!itemPrice || itemPrice === 0) && isUdo && i.quantity === 2) {
-        itemPrice = 36000;
-      }
-      if (!itemPrice || itemPrice === 0) {
-        itemPrice = (p?.sellingPrice || 20000) * i.quantity;
-      }
+      const itemPrice = calculateItemTotal(i, lead.agentName);
 
       return `${productName} x${i.quantity} = ${itemPrice.toLocaleString()}`;
     }).join('\n');
@@ -134,19 +120,7 @@ YES
     
     const orderItems: OrderItem[] = selectedLead.items.map(item => {
       const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
-      
-      let capturedPrice = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
-      if (!capturedPrice || capturedPrice === 0) {
-        if (item.packageLabel) {
-          const match = item.packageLabel.match(/₦([\d,]+)/);
-          if (match) capturedPrice = parseInt(match[1].replace(/,/g, ''));
-        }
-      }
-      // Fallback for Agent Udo's special 2-bottle pricing
-      const isUdo = (selectedLead.agentName?.toLowerCase().includes('udo')) || (selectedLead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
-      if ((!capturedPrice || capturedPrice === 0) && isUdo && item.quantity === 2) {
-        capturedPrice = 36000;
-      }
+      const capturedPrice = calculateItemTotal(item, selectedLead.agentName);
 
       const unitPrice = (capturedPrice && capturedPrice > 0)
         ? (capturedPrice / item.quantity) 
@@ -416,20 +390,7 @@ YES
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Estimated Lead Value</label>
-                  <p className="text-2xl font-black text-slate-900">₦{viewingLead.items.reduce((acc, item) => {
-                    const price = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
-                    if (price && price > 0) return acc + price;
-                    if (item.packageLabel) {
-                      const match = item.packageLabel.match(/₦([\d,]+)/);
-                      if (match) return acc + parseInt(match[1].replace(/,/g, ''));
-                    }
-                    // Fallback for Agent Udo's 2-bottle special
-                    const isUdo = (viewingLead.agentName?.toLowerCase().includes('udo')) || (viewingLead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
-                    if (isUdo && item.quantity === 2) {
-                      return acc + 36000;
-                    }
-                    return acc + (item.quantity * 20000);
-                  }, 0).toLocaleString()}</p>
+                  <p className="text-2xl font-black text-slate-900">₦{viewingLead.items.reduce((acc, item) => acc + calculateItemTotal(item, viewingLead.agentName), 0).toLocaleString()}</p>
                 </div>
               </div>
               <div className="pt-6 border-t border-slate-100">

@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { db } from '../services/mockDb';
+import { calculateItemTotal } from '../services/pricingUtils';
 import { AbandonedCart, UserRole, Order, DeliveryStatus, PaymentStatus, OrderItem } from '../types';
 
 const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
@@ -33,19 +34,7 @@ const AbandonedCarts: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     const cart = showConvertModal;
     const items: OrderItem[] = (cart.items || []).map(i => {
       const p = products.find(prod => prod.id === i.productId || prod.name.toLowerCase().includes('ginger'));
-      
-      let capturedPrice = typeof i.priceAtCapture === 'string' ? parseFloat(i.priceAtCapture) : i.priceAtCapture;
-      if (!capturedPrice || capturedPrice === 0) {
-        if (i.packageLabel) {
-          const match = i.packageLabel.match(/₦([\d,]+)/);
-          if (match) capturedPrice = parseInt(match[1].replace(/,/g, ''));
-        }
-      }
-      // Fallback for Agent Udo's special 2-bottle pricing
-      const isUdo = (cart.agentName?.toLowerCase().includes('udo')) || (cart.agentName?.toLowerCase() === 'abelchill000@gmail.com');
-      if ((!capturedPrice || capturedPrice === 0) && isUdo && i.quantity === 2) {
-        capturedPrice = 36000;
-      }
+      const capturedPrice = calculateItemTotal(i, cart.agentName);
 
       const unitPrice = (capturedPrice && capturedPrice > 0)
         ? (capturedPrice / i.quantity) 

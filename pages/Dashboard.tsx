@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
+import TestimonialWidget from '../components/TestimonialWidget';
 
 const Dashboard: React.FC = () => {
   const user = db.getCurrentUser();
@@ -265,7 +266,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-semibold text-slate-800 mb-6 text-center lg:text-left">Delivery Funnel Breakdown</h3>
@@ -318,6 +319,9 @@ const Dashboard: React.FC = () => {
              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Active Reminders: {filteredOrders.filter(o => o.deliveryStatus === DeliveryStatus.RESCHEDULED && o.reminderEnabled).length}</p>
           </div>
         </div>
+
+        {/* Testimonial Widget */}
+        <TestimonialWidget />
       </div>
     </div>
   );

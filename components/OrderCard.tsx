@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { calculateItemTotal } from '../services/pricingUtils';
 import { Order, DeliveryStatus, UserRole } from '../types';
 import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, FileText, Trash2, Package, Truck, CreditCard, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -40,18 +41,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   const calculateOrderTotal = (order: Order) => {
-    return order.items.reduce((acc, item) => {
-      const namePrice = item.productName.match(/₦([\d,]+)/);
-      if (namePrice) {
-        return acc + parseInt(namePrice[1].replace(/,/g, ''));
-      }
-      // Fallback for Agent Udo's special 2-bottle pricing
-      const isUdo = (order.createdBy?.toLowerCase().includes('udo')) || (order.createdBy?.toLowerCase() === 'abelchill000@gmail.com');
-      if (isUdo && item.quantity === 2) {
-        return acc + 36000;
-      }
-      return acc + (item.priceAtOrder * item.quantity);
-    }, 0);
+    return order.items.reduce((acc, item) => acc + calculateItemTotal(item, order.createdBy), 0);
   };
 
   return (

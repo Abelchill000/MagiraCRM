@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { calculateItemTotal } from '../services/pricingUtils';
 import { WebLead, LeadStatus, Order, OrderForm, Product, DeliveryStatus } from '../types';
 import { Phone, Copy, MessageCircle, MapPin, User, Calendar, Eye, Edit2, Trash2, Zap, Package, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -33,26 +34,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
   products,
   isNew
 }) => {
-  const estimatedValue = lead.items.reduce((acc, item) => {
-    const price = typeof item.priceAtCapture === 'string' ? parseFloat(item.priceAtCapture) : item.priceAtCapture;
-    if (price !== undefined && price > 0) {
-      return acc + price;
-    }
-    // Fallback 1: Try to extract price from packageLabel
-    if (item.packageLabel) {
-      const match = item.packageLabel.match(/₦([\d,]+)/);
-      if (match) {
-        return acc + parseInt(match[1].replace(/,/g, ''));
-      }
-    }
-    // Fallback 2: Handle Agent Udo's special 2-bottle pricing if label is missing
-    const isUdo = (lead.agentName?.toLowerCase().includes('udo')) || (lead.agentName?.toLowerCase() === 'abelchill000@gmail.com');
-    if (isUdo && item.quantity === 2) {
-      return acc + 36000;
-    }
-    const p = products.find(prod => prod.id === item.productId || prod.name.toLowerCase().includes('ginger'));
-    return acc + (p ? p.sellingPrice * item.quantity : 20000 * item.quantity);
-  }, 0);
+  const estimatedValue = lead.items.reduce((acc, item) => acc + calculateItemTotal(item, lead.agentName), 0);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '../services/mockDb.ts';
+import { calculateItemTotal } from '../services/pricingUtils';
 import { 
   Order, OrderItem, PaymentStatus, DeliveryStatus, 
   Product, UserRole, User 
@@ -198,19 +199,6 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
 
   const updateStatus = (orderId: string, status: DeliveryStatus, extra?: any) => {
     db.updateOrderStatus(orderId, status, extra);
-  };
-
-  const calculateItemTotal = (item: OrderItem, agentName?: string) => {
-    const namePrice = item.productName.match(/₦([\d,]+)/);
-    if (namePrice) {
-      return parseInt(namePrice[1].replace(/,/g, ''));
-    }
-    // Fallback for Agent Udo's special 2-bottle pricing
-    const isUdo = (agentName?.toLowerCase().includes('udo')) || (agentName?.toLowerCase() === 'abelchill000@gmail.com');
-    if (isUdo && item.quantity === 2) {
-      return 36000;
-    }
-    return item.priceAtOrder * item.quantity;
   };
 
   const calculateOrderTotal = (order: Order) => {
