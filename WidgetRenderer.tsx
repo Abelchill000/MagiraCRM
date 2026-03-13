@@ -49,8 +49,22 @@ const WidgetRenderer: React.FC = () => {
     };
   }, [id]);
 
-  if (loading) return null;
-  if (!widget) return <div className="p-4 text-slate-400 text-xs font-mono">Widget not found</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
+    </div>
+  );
+
+  if (!widget) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
+      <div className="text-4xl mb-4">🚫</div>
+      <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2">Widget Not Found</h2>
+      <p className="text-[10px] text-slate-400 font-medium max-w-[200px]">
+        The widget ID <code className="bg-slate-100 px-1 rounded">{id}</code> could not be located in the database. 
+        Please ensure the widget hasn't been deleted in the CRM.
+      </p>
+    </div>
+  );
 
   return (
     <div className={`min-h-screen ${widget.config.theme === 'dark' ? 'bg-slate-900' : 'bg-transparent'}`}>

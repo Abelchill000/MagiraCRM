@@ -161,7 +161,13 @@ const Widgets: React.FC = () => {
   };
 
   const getWidgetCode = (widget: Widget) => {
-    const baseUrl = window.location.origin;
+    let baseUrl = window.location.origin;
+    
+    // Auto-detect if we are in a dev environment and suggest the shared URL
+    if (baseUrl.includes('-dev-')) {
+      baseUrl = baseUrl.replace('-dev-', '-pre-');
+    }
+    
     const embedUrl = `${baseUrl}/embed/widget/${widget.id}`;
     
     return `<!-- Magira CRM Widget: ${widget.name} -->
@@ -478,6 +484,17 @@ const Widgets: React.FC = () => {
                 </div>
 
                 <div className="relative">
+                  {window.location.origin.includes('-dev-') && (
+                    <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3">
+                      <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 shrink-0">
+                        <Zap size={16} />
+                      </div>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        <span className="font-bold block mb-1">Public Access Warning</span>
+                        You are currently in the <span className="font-bold">Development Preview</span>. I have automatically updated the code below to use your <span className="font-bold">Shared App URL</span> so it works on WordPress.
+                      </p>
+                    </div>
+                  )}
                   <pre className="bg-slate-900 text-slate-300 p-8 rounded-[2rem] text-xs overflow-x-auto font-mono leading-relaxed">
                     {getWidgetCode(showCode)}
                   </pre>
