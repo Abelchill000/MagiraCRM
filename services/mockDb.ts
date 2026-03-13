@@ -305,6 +305,19 @@ class FirebaseDb {
   async deleteWidget(widgetId: string) {
     await deleteDoc(doc(firestore, 'widgets', widgetId));
   }
+
+  async getWidgetById(id: string): Promise<Widget | null> {
+    try {
+      const docRef = doc(firestore, 'widgets', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Widget;
+      }
+    } catch (e) {
+      console.error("Error fetching widget:", e);
+    }
+    return null;
+  }
 }
 
 export const db = new FirebaseDb();

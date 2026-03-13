@@ -66,7 +66,12 @@ const Widgets: React.FC = () => {
     if (!newWidget.prompt) return;
     setIsGenerating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.error("GEMINI_API_KEY is missing from process.env");
+        throw new Error("Gemini API Key is missing. Please ensure it is set in the application settings.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const model = "gemini-3-flash-preview";
       
       let schema: any = {};
@@ -99,6 +104,7 @@ const Widgets: React.FC = () => {
         };
       }
 
+      console.log("Starting AI generation with prompt:", newWidget.prompt);
       const response = await ai.models.generateContent({
         model,
         contents: `Generate content for a ${newWidget.type} widget. Instruction: ${newWidget.prompt}. Use high quality placeholder images from picsum.photos.`,
@@ -108,6 +114,7 @@ const Widgets: React.FC = () => {
         }
       });
 
+      console.log("AI Response received:", response);
       const content = JSON.parse(response.text || '{}');
       setNewWidget(prev => ({ ...prev, generatedContent: content }));
     } catch (error) {
@@ -162,9 +169,27 @@ const Widgets: React.FC = () => {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      alert("Failed to copy to clipboard. Please select the text manually.");
+    }
   };
 
   return (
@@ -261,7 +286,7 @@ const Widgets: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden"
+              className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh]"
             >
               <div className="p-12">
                 <h2 className="text-2xl font-black text-slate-800 mb-2">
@@ -407,7 +432,7 @@ const Widgets: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-hidden"
+              className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh]"
             >
               <div className="p-12">
                 <div className="flex justify-between items-start mb-8">

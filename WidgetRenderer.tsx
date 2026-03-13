@@ -10,11 +10,14 @@ const WidgetRenderer: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, we'd fetch this from the server
-    // For now, we'll try to find it in the local DB
-    const found = db.getWidgets().find(w => w.id === id);
-    setWidget(found || null);
-    setLoading(false);
+    const fetchWidget = async () => {
+      if (!id) return;
+      const found = await db.getWidgetById(id);
+      setWidget(found);
+      setLoading(false);
+    };
+
+    fetchWidget();
 
     // Handle resizing for the parent iframe
     const observer = new ResizeObserver((entries) => {
