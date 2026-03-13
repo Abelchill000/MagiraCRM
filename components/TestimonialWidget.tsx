@@ -3,7 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Quote, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const TESTIMONIALS = [
+interface Testimonial {
+  id: number;
+  name: string;
+  role: string;
+  content: string;
+  rating: number;
+  avatar: string;
+}
+
+const DEFAULT_TESTIMONIALS: Testimonial[] = [
   {
     id: 1,
     name: "Sarah Johnson",
@@ -30,20 +39,24 @@ const TESTIMONIALS = [
   }
 ];
 
-const TestimonialWidget: React.FC = () => {
+interface TestimonialWidgetProps {
+  testimonials?: Testimonial[];
+}
+
+const TestimonialWidget: React.FC<TestimonialWidgetProps> = ({ testimonials = DEFAULT_TESTIMONIALS }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % TESTIMONIALS.length);
+      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [testimonials.length]);
 
-  const next = () => setCurrentIndex((prev) => (prev + 1) % TESTIMONIALS.length);
-  const prev = () => setCurrentIndex((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
+  const next = () => setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+  const prev = () => setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
 
-  const testimonial = TESTIMONIALS[currentIndex];
+  const testimonial = testimonials[currentIndex];
 
   return (
     <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 flex flex-col h-full relative overflow-hidden group">

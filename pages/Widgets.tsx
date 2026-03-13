@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/mockDb';
 import { Widget, WidgetType, UserRole } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GoogleGenAI, Type } from "@google/genai";
 import { 
   Plus, Trash2, Copy, Code, Settings, 
   MessageSquare, UserPlus, ShoppingBag, Zap,
-  Check, ExternalLink, Info
+  Check, ExternalLink, Info, Sparkles, Loader2
 } from 'lucide-react';
 
 const Widgets: React.FC = () => {
@@ -15,10 +16,12 @@ const Widgets: React.FC = () => {
   const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [showCode, setShowCode] = useState<Widget | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [newWidget, setNewWidget] = useState<Partial<Widget>>({
     name: '',
     type: WidgetType.TESTIMONIAL,
+    prompt: '',
     config: {
       theme: 'light',
       autoPlay: true,
@@ -42,6 +45,8 @@ const Widgets: React.FC = () => {
       name: newWidget.name,
       type: newWidget.type as WidgetType,
       config: newWidget.config,
+      prompt: newWidget.prompt,
+      generatedContent: newWidget.generatedContent,
       createdAt: editingWidget?.createdAt || new Date().toISOString(),
       createdBy: editingWidget?.createdBy || db.getCurrentUser()?.name || 'System'
     };
@@ -52,8 +57,65 @@ const Widgets: React.FC = () => {
     setNewWidget({
       name: '',
       type: WidgetType.TESTIMONIAL,
+      prompt: '',
       config: { theme: 'light', autoPlay: true, interval: 5000, showRating: true }
     });
+  };
+
+  const generateWithAI = async () => {
+    if (!newWidget.prompt) return;
+    setIsGenerating(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const model = "gemini-3-flash-preview";
+      
+      let schema: any = {};
+      if (newWidget.type === WidgetType.TESTIMONIAL) {
+        schema = {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.NUMBER },
+              name: { type: Type.STRING },
+              role: { type: Type.STRING },
+              content: { type: Type.STRING },
+              rating: { type: Type.NUMBER },
+              avatar: { type: Type.STRING }
+            },
+            required: ["id", "name", "role", "content", "rating", "avatar"]
+          }
+        };
+      } else if (newWidget.type === WidgetType.PRODUCT_SHOWCASE) {
+        schema = {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            price: { type: Type.STRING },
+            image: { type: Type.STRING }
+          },
+          required: ["title", "description", "price", "image"]
+        };
+      }
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: `Generate content for a ${newWidget.type} widget. Instruction: ${newWidget.prompt}. Use high quality placeholder images from picsum.photos.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema
+        }
+      });
+
+      const content = JSON.parse(response.text || '{}');
+      setNewWidget(prev => ({ ...prev, generatedContent: content }));
+    } catch (error) {
+      console.error("AI Generation Error:", error);
+      alert("Failed to generate content. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -67,23 +129,34 @@ const Widgets: React.FC = () => {
     const embedUrl = `${baseUrl}/embed/widget/${widget.id}`;
     
     return `<!-- Magira CRM Widget: ${widget.name} -->
-<div id="magira-widget-${widget.id}"></div>
+<!-- Paste this HTML code into your Elementor HTML Widget -->
+<div id="magira-widget-${widget.id}" style="width: 100%; min-height: 200px; overflow: hidden;">
+  <iframe 
+    src="${embedUrl}" 
+    id="magira-iframe-${widget.id}"
+    style="width: 100%; border: none; overflow: hidden; display: block;" 
+    scrolling="no"
+    onload="this.style.height=this.contentWindow.document.body.scrollHeight+'px';"
+  ></iframe>
+</div>
+
 <script>
   (function() {
-    var iframe = document.createElement('iframe');
-    iframe.src = "${embedUrl}";
-    iframe.style.width = "100%";
-    iframe.style.height = "${widget.type === WidgetType.TESTIMONIAL ? '400px' : '600px'}";
-    iframe.style.border = "none";
-    iframe.style.overflow = "hidden";
-    iframe.setAttribute('scrolling', 'no');
-    document.getElementById('magira-widget-${widget.id}').appendChild(iframe);
+    var iframe = document.getElementById('magira-iframe-${widget.id}');
     
+    // Listen for resize messages from the widget
     window.addEventListener('message', function(e) {
       if (e.data.type === 'magira-resize' && e.data.widgetId === '${widget.id}') {
         iframe.style.height = e.data.height + 'px';
       }
     });
+
+    // Periodic check for height if needed
+    setInterval(function() {
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'magira-ping' }, '*');
+      }
+    }, 2000);
   })();
 </script>`;
   };
@@ -227,11 +300,41 @@ const Widgets: React.FC = () => {
                         ))}
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">AI Content Instructions</label>
+                      <textarea 
+                        placeholder="e.g. Create 3 testimonials for a weight loss product. Sound enthusiastic and mention fast results."
+                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-slate-900 font-bold h-32 text-sm"
+                        value={newWidget.prompt}
+                        onChange={e => setNewWidget({...newWidget, prompt: e.target.value})}
+                      />
+                      <button 
+                        onClick={generateWithAI}
+                        disabled={isGenerating || !newWidget.prompt}
+                        className="mt-3 w-full bg-emerald-600 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-emerald-700 transition disabled:bg-slate-200"
+                      >
+                        {isGenerating ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                        {isGenerating ? 'Generating...' : 'Generate Content with AI'}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-6">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Configuration</label>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Configuration & Preview</label>
                     <div className="bg-slate-50 rounded-[2rem] p-6 space-y-4">
+                      {newWidget.generatedContent ? (
+                        <div className="p-4 bg-white rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">AI Content Ready</p>
+                          <p className="text-xs text-slate-500 line-clamp-3">
+                            {JSON.stringify(newWidget.generatedContent)}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
+                          <p className="text-[10px] font-black text-slate-300 uppercase">No AI Content Yet</p>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-600">Dark Mode</span>
                         <button 
@@ -325,7 +428,7 @@ const Widgets: React.FC = () => {
                     {getWidgetCode(showCode)}
                   </pre>
                   <button 
-                    onClick={() => copyToClipboard(getWidgetCode(showCode))}
+                    onClick={() => copyToClipboard(getWidgetCode(showCode!))}
                     className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
                       copied ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
                     }`}

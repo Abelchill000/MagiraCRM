@@ -156,6 +156,8 @@ export interface Widget {
   name: string;
   type: WidgetType;
   config: any;
+  prompt?: string;
+  generatedContent?: any;
   createdAt: string;
   createdBy: string;
 }

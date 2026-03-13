@@ -28,7 +28,22 @@ const WidgetRenderer: React.FC = () => {
     });
 
     observer.observe(document.body);
-    return () => observer.disconnect();
+
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data.type === 'magira-ping') {
+        window.parent.postMessage({
+          type: 'magira-resize',
+          widgetId: id,
+          height: document.body.scrollHeight
+        }, '*');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('message', handleMessage);
+    };
   }, [id]);
 
   if (loading) return null;
@@ -38,7 +53,7 @@ const WidgetRenderer: React.FC = () => {
     <div className={`min-h-screen ${widget.config.theme === 'dark' ? 'bg-slate-900' : 'bg-transparent'}`}>
       {widget.type === WidgetType.TESTIMONIAL && (
         <div className="p-2">
-          <TestimonialWidget />
+          <TestimonialWidget testimonials={widget.generatedContent} />
         </div>
       )}
       
@@ -69,11 +84,16 @@ const WidgetRenderer: React.FC = () => {
 
       {widget.type === WidgetType.PRODUCT_SHOWCASE && (
         <div className="p-4 bg-white rounded-3xl shadow-lg border border-slate-100 max-w-xs mx-auto overflow-hidden">
-          <img src="https://picsum.photos/seed/ginger/400/300" alt="Product" className="w-full h-40 object-cover rounded-2xl mb-4" />
-          <h3 className="font-black text-slate-800">Ginger Shot Recovery</h3>
-          <p className="text-xs text-slate-500 mb-4">Pure organic ginger extract for your daily wellness.</p>
+          <img 
+            src={widget.generatedContent?.image || "https://picsum.photos/seed/ginger/400/300"} 
+            alt="Product" 
+            className="w-full h-40 object-cover rounded-2xl mb-4" 
+            referrerPolicy="no-referrer"
+          />
+          <h3 className="font-black text-slate-800">{widget.generatedContent?.title || "Ginger Shot Recovery"}</h3>
+          <p className="text-xs text-slate-500 mb-4">{widget.generatedContent?.description || "Pure organic ginger extract for your daily wellness."}</p>
           <div className="flex items-center justify-between">
-            <span className="font-black text-emerald-600">₦12,000</span>
+            <span className="font-black text-emerald-600">{widget.generatedContent?.price || "₦12,000"}</span>
             <button className="bg-slate-900 text-white px-4 py-2 rounded-lg font-black uppercase text-[9px]">Buy Now</button>
           </div>
         </div>
