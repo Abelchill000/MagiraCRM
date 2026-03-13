@@ -13,25 +13,19 @@ import {
   DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget, Widget 
 } from '../types';
 
-import firebaseConfig from '../firebase-applet-config.json';
+const firebaseConfig = {
+  apiKey: "AIzaSyDjIST5wP--TJhSxmbDqvgTSHUUFeMJVwE",
+  authDomain: "magiracrm.firebaseapp.com",
+  projectId: "magiracrm",
+  storageBucket: "magiracrm.firebasestorage.app",
+  messagingSenderId: "960782141874",
+  appId: "1:960782141874:web:c8ba969930b2b5dd0b7cab",
+  measurementId: "G-CC1R1BDWTJ"
+};
 
 const app = initializeApp(firebaseConfig);
-export const firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
-
-// Connection test
-async function testConnection() {
-  try {
-    const { getDocFromServer } = await import('firebase/firestore');
-    await getDocFromServer(doc(firestore, 'test', 'connection'));
-    console.log("Firebase connection verified.");
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
-    }
-  }
-}
-testConnection();
+const firestore = getFirestore(app);
+const auth = getAuth(app);
 
 type Listener = () => void;
 
