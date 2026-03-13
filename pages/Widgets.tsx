@@ -74,7 +74,7 @@ const Widgets: React.FC = () => {
       const ai = new GoogleGenAI({ apiKey });
       const model = "gemini-3-flash-preview";
       
-      let schema: any = {};
+      let schema: any = null;
       if (newWidget.type === WidgetType.TESTIMONIAL) {
         schema = {
           type: Type.ARRAY,
@@ -102,6 +102,30 @@ const Widgets: React.FC = () => {
           },
           required: ["title", "description", "price", "image"]
         };
+      } else if (newWidget.type === WidgetType.RECENT_SALES) {
+        schema = {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.NUMBER },
+              location: { type: Type.STRING },
+              product: { type: Type.STRING },
+              time: { type: Type.STRING }
+            },
+            required: ["id", "location", "product", "time"]
+          }
+        };
+      } else if (newWidget.type === WidgetType.CONTACT_FORM) {
+        schema = {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            subtitle: { type: Type.STRING },
+            buttonText: { type: Type.STRING }
+          },
+          required: ["title", "subtitle", "buttonText"]
+        };
       }
 
       console.log("Starting AI generation with prompt:", newWidget.prompt);
@@ -109,17 +133,22 @@ const Widgets: React.FC = () => {
         model,
         contents: `Generate content for a ${newWidget.type} widget. Instruction: ${newWidget.prompt}. Use high quality placeholder images from picsum.photos.`,
         config: {
-          responseMimeType: "application/json",
-          responseSchema: schema
+          responseMimeType: schema ? "application/json" : "text/plain",
+          ...(schema && { responseSchema: schema })
         }
       });
 
       console.log("AI Response received:", response);
-      const content = JSON.parse(response.text || '{}');
+      if (!response.text) {
+        throw new Error("The AI returned an empty response. Please try a different prompt.");
+      }
+
+      const content = schema ? JSON.parse(response.text) : { text: response.text };
       setNewWidget(prev => ({ ...prev, generatedContent: content }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Generation Error:", error);
-      alert("Failed to generate content. Please try again.");
+      const errorMessage = error.message || "Unknown error occurred";
+      alert(`Failed to generate content: ${errorMessage}. Please try again later.`);
     } finally {
       setIsGenerating(false);
     }

@@ -62,27 +62,21 @@ const WidgetRenderer: React.FC = () => {
       
       {widget.type === WidgetType.CONTACT_FORM && (
         <div className="p-4 bg-white rounded-3xl shadow-lg border border-slate-100 max-w-md mx-auto">
-          <h2 className="text-xl font-black text-slate-800 mb-2">Get in Touch</h2>
-          <p className="text-slate-500 text-sm mb-6">Leave your details and we'll get back to you.</p>
+          <h2 className="text-xl font-black text-slate-800 mb-2">{widget.generatedContent?.title || "Get in Touch"}</h2>
+          <p className="text-slate-500 text-sm mb-6">{widget.generatedContent?.subtitle || "Leave your details and we'll get back to you."}</p>
           <div className="space-y-4">
             <input type="text" placeholder="Full Name" className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" />
             <input type="tel" placeholder="Phone Number" className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" />
             <textarea placeholder="Message" className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm h-24"></textarea>
-            <button className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px]">Send Message</button>
+            <button className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px]">
+              {widget.generatedContent?.buttonText || "Send Message"}
+            </button>
           </div>
         </div>
       )}
 
       {widget.type === WidgetType.RECENT_SALES && (
-        <div className="p-4 flex items-center gap-4 bg-white rounded-2xl shadow-xl border border-slate-100 max-w-xs animate-bounce">
-          <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
-            <Zap size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-900">New Sale!</p>
-            <p className="text-[10px] text-slate-500">Someone in Lagos just bought Ginger Shot x3</p>
-          </div>
-        </div>
+        <RecentSalesWidget sales={widget.generatedContent} />
       )}
 
       {widget.type === WidgetType.PRODUCT_SHOWCASE && (
@@ -113,3 +107,32 @@ const Zap = ({ size }: { size: number }) => (
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
   </svg>
 );
+
+const RecentSalesWidget: React.FC<{ sales?: any[] }> = ({ sales }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const data = sales || [
+    { id: 1, location: "Lagos", product: "Ginger Shot x3", time: "just now" },
+    { id: 2, location: "Abuja", product: "Recovery Pack", time: "2 mins ago" }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % data.length);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [data.length]);
+
+  const sale = data[currentIndex];
+
+  return (
+    <div className="p-4 flex items-center gap-4 bg-white rounded-2xl shadow-xl border border-slate-100 max-w-xs animate-bounce">
+      <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+        <Zap size={20} />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-slate-900">New Sale!</p>
+        <p className="text-[10px] text-slate-500">Someone in {sale.location} bought {sale.product} ({sale.time})</p>
+      </div>
+    </div>
+  );
+};
