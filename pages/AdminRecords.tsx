@@ -37,9 +37,10 @@ const AdminRecords: React.FC = () => {
   });
 
   const user = db.getCurrentUser();
-  const isAdmin = user?.role === UserRole.ADMIN;
+  const isGlobalAdmin = user?.role === UserRole.ADMIN && user?.email === 'admin@magiracrm.store';
 
   useEffect(() => {
+    if (!isGlobalAdmin) return;
     const unsub = db.subscribe(() => {
       setRestocks(db.getRestocks());
       setWaybills(db.getWaybills());
@@ -120,7 +121,20 @@ const AdminRecords: React.FC = () => {
     return budgets.filter(b => b.userName.toLowerCase().includes(searchTerm.toLowerCase()));
   };
 
-  const totalSpent = filteredData().reduce((acc, curr: any) => acc + (curr.totalCost || curr.cost || curr.amount || 0), 0);
+  const filteredDataList = filteredData();
+  const totalSpent = filteredDataList.reduce((acc, curr: any) => acc + (curr.totalCost || curr.cost || curr.amount || 0), 0);
+
+  if (!isGlobalAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+          <Target size={40} />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900">Access Restricted</h2>
+        <p className="text-slate-500 max-w-md">Only the primary administrator (Abel) has access to the Admin Records section.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -167,7 +181,7 @@ const AdminRecords: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Records</p>
-          <p className="text-3xl font-black text-slate-900">{filteredData().length}</p>
+          <p className="text-3xl font-black text-slate-900">{filteredDataList.length}</p>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
@@ -235,12 +249,12 @@ const AdminRecords: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredData().length === 0 ? (
+              {filteredDataList.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-medium italic">No records found.</td>
                 </tr>
               ) : (
-                filteredData().map((item: any) => (
+                filteredDataList.map((item: any) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     {activeTab === 'restock' && (
                       <>

@@ -17,6 +17,7 @@ const AgentReports: React.FC = () => {
   const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
 
   const user = db.getCurrentUser();
+  const isGlobalAdmin = user?.role === UserRole.ADMIN && user?.email === 'admin@magiracrm.store';
   const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
@@ -34,8 +35,10 @@ const AgentReports: React.FC = () => {
   const filteredOrders = useMemo(() => {
     let result = orders;
     
-    // Filter by agent
-    if (selectedAgentId !== 'all') {
+    // Only Global Admin sees everything, others see only their own
+    if (!isGlobalAdmin) {
+      result = result.filter(o => o.createdBy === user?.name);
+    } else if (selectedAgentId !== 'all') {
       const agent = agents.find(a => a.id === selectedAgentId);
       if (agent) {
         result = result.filter(o => o.createdBy === agent.name);
@@ -140,7 +143,10 @@ const AgentReports: React.FC = () => {
   };
 
   const handleStatusChange = async (orderId: string, currentStatus: DeliveryStatus) => {
-    if (!isAdmin) return;
+    if (!isGlobalAdmin) {
+      alert("Only the primary administrator (Abel) can mark orders as delivered or unmark them.");
+      return;
+    }
 
     if (currentStatus === DeliveryStatus.DELIVERED) {
       if (window.confirm("Unmark this order as delivered? Stock will be adjusted.")) {
@@ -305,13 +311,13 @@ const AgentReports: React.FC = () => {
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                {isAdmin && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>}
+                {isGlobalAdmin && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-8 py-12 text-center text-slate-400 font-medium italic">No records found for this selection.</td>
+                  <td colSpan={isGlobalAdmin ? 7 : 6} className="px-8 py-12 text-center text-slate-400 font-medium italic">No records found for this selection.</td>
                 </tr>
               ) : (
                 filteredOrders.map(order => (
@@ -330,7 +336,7 @@ const AgentReports: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-8 py-4 text-[10px] font-bold text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</td>
-                    {isAdmin && (
+                    {isGlobalAdmin && (
                       <td className="px-8 py-4">
                         <button 
                           onClick={() => handleStatusChange(order.id, order.deliveryStatus)}

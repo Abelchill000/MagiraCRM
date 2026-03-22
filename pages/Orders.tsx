@@ -54,6 +54,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     return unsubscribe;
   }, []);
 
+  const isGlobalAdmin = user.role === UserRole.ADMIN && user.email === 'admin@magiracrm.store';
   const isAdmin = user.role === UserRole.ADMIN;
   const isInventoryManager = user.role === UserRole.INVENTORY_MANAGER;
   const isLogisticsManager = user.role === UserRole.LOGISTICS_MANAGER;
@@ -61,12 +62,13 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
   const canManageAllOrders = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
+  const canSeeAllOrders = isGlobalAdmin;
 
   const orders = useMemo(() => {
     let filtered = dbOrders;
     
-    // Managers and Admins see everything
-    if (!canManageAllOrders) {
+    // Only Global Admin sees everything
+    if (!canSeeAllOrders) {
       filtered = filtered.filter(o => o.createdBy === user?.name);
     } else if (selectedAgentName !== 'all') {
       filtered = filtered.filter(o => o.createdBy === selectedAgentName);
@@ -167,10 +169,10 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     const order = dbOrders.find(o => o.id === orderId);
     if (!order) return;
 
-    // ONLY Admin can mark as delivered or unmark from delivered
+    // ONLY Global Admin can mark as delivered or unmark from delivered
     if (status === DeliveryStatus.DELIVERED || order.deliveryStatus === DeliveryStatus.DELIVERED) {
-      if (!isAdmin) {
-        alert("Only administrators can mark orders as delivered or unmark them.");
+      if (!isGlobalAdmin) {
+        alert("Only the primary administrator (Abel) can mark orders as delivered or unmark them.");
         return;
       }
     }
@@ -273,12 +275,12 @@ YES
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             Order Management
-            {(canManageAllOrders && !isAdmin) && (
-              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Manager Mode</span>
+            {canSeeAllOrders && (
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Admin Console</span>
             )}
           </h1>
           <p className="text-slate-500 text-sm font-medium">
-            {canManageAllOrders ? 'Global order tracking console.' : 'Tracking orders processed by your sales account.'}
+            {canSeeAllOrders ? 'Global order tracking console.' : 'Tracking orders processed by your sales account.'}
           </p>
         </div>
         <button 
@@ -305,7 +307,7 @@ YES
           </div>
         </div>
 
-        {canManageAllOrders && (
+        {canSeeAllOrders && (
           <div className="w-full md:w-64">
             <select
               value={selectedAgentName}
@@ -405,7 +407,7 @@ YES
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
                         </button>
-                        {isAdmin && (
+                        {isGlobalAdmin && (
                           <button 
                             onClick={() => { if(window.confirm('Delete order?')) { db.deleteOrder(order.id); } }}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
@@ -435,7 +437,7 @@ YES
                 {isEditingOrder ? 'Edit Order Profile' : 'Order Fulfillment Profile'}
               </h2>
               <div className="flex items-center gap-2">
-                {isAdmin && !isEditingOrder && (
+                {isGlobalAdmin && !isEditingOrder && (
                   <button 
                     onClick={() => {
                       setIsEditingOrder(true);

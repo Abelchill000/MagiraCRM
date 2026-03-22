@@ -36,6 +36,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [selectedAgentName, setSelectedAgentName] = useState<string>('all');
   const [agents, setAgents] = useState<User[]>([]);
 
+  const isGlobalAdmin = user?.role === UserRole.ADMIN && user?.email === 'admin@magiracrm.store';
   const isAdmin = userRole === UserRole.ADMIN;
   const isInventoryManager = user?.role === UserRole.INVENTORY_MANAGER;
   const isLogisticsManager = user?.role === UserRole.LOGISTICS_MANAGER;
@@ -43,6 +44,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
   
   const canManageFulfillment = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
+  const canSeeAllLeads = isGlobalAdmin;
 
   useEffect(() => {
     setAgents(db.getUsers().filter(u => u.role === UserRole.SALES_AGENT || u.role === UserRole.ADMIN));
@@ -58,8 +60,8 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const sortedLeads = useMemo(() => {
     let filtered = leads;
     
-    // Admin and Super Agent see everything
-    if (!(isAdmin || isSuperAgent)) {
+    // Only Global Admin sees everything
+    if (!canSeeAllLeads) {
       filtered = filtered.filter(l => l.agentName === user?.name);
     } else if (selectedAgentName !== 'all') {
       filtered = filtered.filter(l => l.agentName === selectedAgentName);
@@ -211,14 +213,14 @@ YES
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Console</h1>
-            {(isAdmin || isSuperAgent) && (
+            {canSeeAllLeads && (
               <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest border border-emerald-200">
                 Network Access Enabled
               </span>
             )}
           </div>
           <p className="text-slate-500 text-sm font-medium">
-            {isAdmin || isSuperAgent ? 'Network-wide lead capture monitoring.' : 'Tracking leads attributed to your sales profile.'}
+            {canSeeAllLeads ? 'Network-wide lead capture monitoring.' : 'Tracking leads attributed to your sales profile.'}
           </p>
         </div>
       </div>
@@ -239,7 +241,7 @@ YES
           </div>
         </div>
 
-        {(isAdmin || isSuperAgent) && (
+        {canSeeAllLeads && (
           <div className="w-full md:w-64">
             <select
               value={selectedAgentName}
@@ -351,7 +353,7 @@ YES
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                           </svg>
                           </button>
-                          {linkedOrder && linkedOrder.deliveryStatus !== DeliveryStatus.DELIVERED && isAdmin && (
+                          {linkedOrder && linkedOrder.deliveryStatus !== DeliveryStatus.DELIVERED && isGlobalAdmin && (
                             <button 
                               onClick={() => handleMarkDelivered(linkedOrder.id, lead.id)}
                               className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
@@ -362,7 +364,7 @@ YES
                               </svg>
                             </button>
                           )}
-                          {isAdmin && (
+                          {isGlobalAdmin && (
                             <button 
                               onClick={() => handleDeleteLead(lead.id)}
                               className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
@@ -393,7 +395,7 @@ YES
                 {isEditingLead ? 'Edit Customer Profile' : 'Customer Application Profile'}
               </h2>
               <div className="flex items-center gap-2">
-                {isAdmin && !isEditingLead && (
+                {isGlobalAdmin && !isEditingLead && (
                   <button 
                     onClick={() => {
                       setIsEditingLead(true);

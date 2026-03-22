@@ -18,6 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
   
   // Special access email
   const isPrivilegedUser = user?.email === 'iconfidence909@gmail.com';
+  const isGlobalAdmin = user?.role === UserRole.ADMIN && user?.email === 'admin@magiracrm.store';
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: [UserRole.ADMIN, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
@@ -52,17 +53,24 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
       label: 'Team Access', 
       icon: '👤', 
       roles: [UserRole.ADMIN],
+      specialAccess: isGlobalAdmin,
       badge: pendingCount > 0 ? pendingCount : null,
       badgeColor: 'bg-red-500'
     },
-    { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN] },
+    { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN], specialAccess: isGlobalAdmin },
     { id: 'adsbudget', label: 'Ads Budget', icon: '💰', roles: [UserRole.ADMIN, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
-    { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
-    { id: 'adminrecords', label: 'Admin Records', icon: '📒', roles: [UserRole.ADMIN] },
-    { id: 'reports', label: 'Agent Reports', icon: '📋', roles: [UserRole.ADMIN] },
+    { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN], specialAccess: isGlobalAdmin },
+    { id: 'adminrecords', label: 'Admin Records', icon: '📒', roles: [UserRole.ADMIN], specialAccess: isGlobalAdmin },
+    { id: 'reports', label: 'Agent Reports', icon: '📋', roles: [UserRole.ADMIN], specialAccess: isGlobalAdmin },
   ];
 
-  const filteredItems = menuItems.filter(item => item.roles.includes(userRole) || item.specialAccess);
+  const filteredItems = menuItems.filter(item => {
+    // If it's a super-admin only tab, check isGlobalAdmin
+    if (['users', 'database', 'analytics', 'adminrecords', 'reports'].includes(item.id)) {
+      return isGlobalAdmin;
+    }
+    return item.roles.includes(userRole) || item.specialAccess;
+  });
 
   return (
     <aside 
