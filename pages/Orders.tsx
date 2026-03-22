@@ -218,6 +218,8 @@ Select State
 ${order.stateName || 'N/A'}
 Complete Address
 ${order.address}
+Special Delivery Instruction
+${order.deliveryInstructions || 'No special instructions.'}
 Choose Product
 ${itemsText}
 Are you ready for the delivery?

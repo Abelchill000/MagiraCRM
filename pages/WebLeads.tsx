@@ -102,6 +102,8 @@ Select State
 ${lead.stateName || 'N/A'}
 Complete Address
 ${lead.address}
+Special Delivery Instruction
+${lead.deliveryInstructions || 'No special instructions.'}
 Choose Product
 ${itemsText}
 Are you ready for the delivery?
