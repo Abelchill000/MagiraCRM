@@ -9,6 +9,7 @@ import Products from './pages/Products.tsx';
 import Orders from './pages/Orders.tsx';
 import Logistics from './pages/Logistics.tsx';
 import Analytics from './pages/Analytics.tsx';
+import AgentReports from './pages/AgentReports.tsx';
 import FormBuilder from './pages/FormBuilder.tsx';
 import WebLeads from './pages/WebLeads.tsx';
 import AbandonedCarts from './pages/AbandonedCarts.tsx';
@@ -275,6 +276,7 @@ const App: React.FC = () => {
       case 'orders': return <Orders user={user} />;
       case 'logistics': return <Logistics userRole={user.role} />;
       case 'analytics': return <Analytics />;
+      case 'reports': return <AgentReports />;
       case 'formbuilder': return <FormBuilder />;
       case 'leads': return <WebLeads userRole={user.role} />;
       case 'abandoned': return <AbandonedCarts userRole={user.role} />;
