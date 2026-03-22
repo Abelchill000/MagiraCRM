@@ -13,6 +13,11 @@ const AgentReports: React.FC = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('all');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [showLogisticsPrompt, setShowLogisticsPrompt] = useState<{orderId: string} | null>(null);
+  const [tempLogisticsCost, setTempLogisticsCost] = useState<number>(0);
+
+  const user = db.getCurrentUser();
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
@@ -132,6 +137,30 @@ const AgentReports: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleStatusChange = async (orderId: string, currentStatus: DeliveryStatus) => {
+    if (!isAdmin) return;
+
+    if (currentStatus === DeliveryStatus.DELIVERED) {
+      if (window.confirm("Unmark this order as delivered? Stock will be adjusted.")) {
+        await db.updateOrderStatus(orderId, DeliveryStatus.PENDING);
+        alert("Order unmarked as delivered.");
+      }
+    } else {
+      setShowLogisticsPrompt({ orderId });
+      setTempLogisticsCost(0);
+    }
+  };
+
+  const handleLogisticsSubmit = async () => {
+    if (showLogisticsPrompt) {
+      await db.updateOrderStatus(showLogisticsPrompt.orderId, DeliveryStatus.DELIVERED, { 
+        logisticsCost: tempLogisticsCost 
+      });
+      setShowLogisticsPrompt(null);
+      alert("Order marked as Delivered!");
+    }
   };
 
   return (
@@ -276,12 +305,13 @@ const AgentReports: React.FC = () => {
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                {isAdmin && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-12 text-center text-slate-400 font-medium italic">No records found for this selection.</td>
+                  <td colSpan={isAdmin ? 7 : 6} className="px-8 py-12 text-center text-slate-400 font-medium italic">No records found for this selection.</td>
                 </tr>
               ) : (
                 filteredOrders.map(order => (
@@ -300,6 +330,20 @@ const AgentReports: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-8 py-4 text-[10px] font-bold text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</td>
+                    {isAdmin && (
+                      <td className="px-8 py-4">
+                        <button 
+                          onClick={() => handleStatusChange(order.id, order.deliveryStatus)}
+                          className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-xl transition-all ${
+                            order.deliveryStatus === DeliveryStatus.DELIVERED 
+                              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' 
+                              : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                          }`}
+                        >
+                          {order.deliveryStatus === DeliveryStatus.DELIVERED ? 'Unmark Delivered' : 'Mark Delivered'}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -307,6 +351,32 @@ const AgentReports: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Logistics Cost Modal */}
+      {showLogisticsPrompt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110]">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Fulfillment Data</h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">Finalize the order by entering the logistics partner expense.</p>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Logistics/Shipping Cost (₦)</label>
+                <input 
+                  type="number" autoFocus
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-black text-2xl text-center" 
+                  value={tempLogisticsCost}
+                  onChange={(e) => setTempLogisticsCost(Number(e.target.value))}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <button onClick={handleLogisticsSubmit} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition active:scale-[0.98]">Mark as Delivered</button>
+                <button onClick={() => setShowLogisticsPrompt(null)} className="w-full py-2 text-slate-400 font-black text-[10px] uppercase tracking-widest">Go Back</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

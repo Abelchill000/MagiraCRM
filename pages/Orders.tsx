@@ -41,10 +41,15 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     deliveryStatus: DeliveryStatus.PENDING
   });
 
+  const [selectedAgentName, setSelectedAgentName] = useState<string>('all');
+  const [agents, setAgents] = useState<User[]>([]);
+
   // Subscribe to real-time database changes
   useEffect(() => {
+    setAgents(db.getUsers().filter(u => u.role === UserRole.SALES_AGENT || u.role === UserRole.ADMIN));
     const unsubscribe = db.subscribe(() => {
       setDbOrders(db.getOrders());
+      setAgents(db.getUsers().filter(u => u.role === UserRole.SALES_AGENT || u.role === UserRole.ADMIN));
     });
     return unsubscribe;
   }, []);
@@ -63,6 +68,8 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     // Managers and Admins see everything
     if (!canManageAllOrders) {
       filtered = filtered.filter(o => o.createdBy === user?.name);
+    } else if (selectedAgentName !== 'all') {
+      filtered = filtered.filter(o => o.createdBy === selectedAgentName);
     }
 
     if (searchTerm) {
@@ -75,7 +82,7 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
     }
 
     return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [dbOrders, canManageAllOrders, user?.name, searchTerm]);
+  }, [dbOrders, canManageAllOrders, user?.name, searchTerm, selectedAgentName]);
 
   const handleAddItem = (productId: string) => {
     const product = products.find(p => p.id === productId);
@@ -157,6 +164,17 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   };
 
   const handleStatusChange = (orderId: string, status: DeliveryStatus) => {
+    const order = dbOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    // ONLY Admin can mark as delivered or unmark from delivered
+    if (status === DeliveryStatus.DELIVERED || order.deliveryStatus === DeliveryStatus.DELIVERED) {
+      if (!isAdmin) {
+        alert("Only administrators can mark orders as delivered or unmark them.");
+        return;
+      }
+    }
+
     // Managers and Admins have full status control
     if (!canManageAllOrders && status !== DeliveryStatus.RESCHEDULED) {
       alert("Standard Sales Agents can only change order status to 'Rescheduled'. Contact an Admin/Manager for other changes.");
@@ -271,43 +289,141 @@ YES
         </button>
       </div>
 
-      <div className="relative">
-        <input 
-          type="text"
-          placeholder="Search by Name, Order ID, or Tracking ID..."
-          className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <input 
+            type="text"
+            placeholder="Search by Name, Order ID, or Tracking ID..."
+            className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
         </div>
+
+        {canManageAllOrders && (
+          <div className="w-full md:w-64">
+            <select
+              value={selectedAgentName}
+              onChange={(e) => setSelectedAgentName(e.target.value)}
+              className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all appearance-none"
+            >
+              <option value="all">All Agents</option>
+              {agents.map(agent => (
+                <option key={agent.id} value={agent.name}>{agent.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {orders.length === 0 ? (
-          <div className="col-span-full bg-white p-24 text-center rounded-[2.5rem] border border-slate-100 text-slate-400 font-medium">
-            <div className="flex flex-col items-center opacity-30">
-              <div className="text-5xl mb-4">📦</div>
-              <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">No active orders.</p>
-            </div>
-          </div>
-        ) : (
-          orders.map(order => (
-            <OrderCard 
-              key={order.id}
-              order={order}
-              onView={setViewingOrder}
-              onCopyReceipt={copyReceiptText}
-              onWhatsApp={shareWhatsApp}
-              onDelete={(id) => { if(window.confirm('Delete order?')) { db.deleteOrder(id); } }}
-              onStatusChange={handleStatusChange}
-              canManageAllOrders={canManageAllOrders}
-            />
-          ))
-        )}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Info</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Agent</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-8 py-24 text-center">
+                    <div className="flex flex-col items-center opacity-30">
+                      <div className="text-5xl mb-4">📦</div>
+                      <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">No active orders.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                orders.map(order => (
+                  <tr key={order.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-8 py-5">
+                      <div className="flex flex-col" onClick={() => setViewingOrder(order)}>
+                        <span className="text-xs font-black text-slate-900 cursor-pointer hover:text-blue-600 transition-colors">#{order.id}</span>
+                        <span className="text-[10px] font-bold text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[9px] font-black text-blue-500 mt-1 uppercase tracking-tighter">{order.trackingId}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-slate-800">{order.customerName}</span>
+                        <span className="text-[10px] font-bold text-slate-500">{order.phone}</span>
+                        <span className="text-[10px] font-medium text-slate-400 truncate max-w-[150px]">{order.stateName}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-tight bg-slate-100 px-2 py-1 rounded-lg">
+                        {order.createdBy}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-xs font-black text-slate-900">₦{order.totalAmount.toLocaleString()}</span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <select
+                        value={order.deliveryStatus}
+                        onChange={(e) => handleStatusChange(order.id, e.target.value as DeliveryStatus)}
+                        className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-full border-none focus:ring-2 focus:ring-offset-2 outline-none cursor-pointer transition-all ${
+                          order.deliveryStatus === DeliveryStatus.DELIVERED ? 'bg-emerald-100 text-emerald-700 focus:ring-emerald-500' :
+                          order.deliveryStatus === DeliveryStatus.CANCELLED ? 'bg-red-100 text-red-700 focus:ring-red-500' :
+                          order.deliveryStatus === DeliveryStatus.RESCHEDULED ? 'bg-amber-100 text-amber-700 focus:ring-amber-500' :
+                          'bg-blue-100 text-blue-700 focus:ring-blue-500'
+                        }`}
+                      >
+                        {Object.values(DeliveryStatus).map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => copyReceiptText(order)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                          title="Copy Receipt"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => shareWhatsApp(order)}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                          title="WhatsApp"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                        </button>
+                        {isAdmin && (
+                          <button 
+                            onClick={() => { if(window.confirm('Delete order?')) { db.deleteOrder(order.id); } }}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            title="Delete Order"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Order Detail Modal */}
