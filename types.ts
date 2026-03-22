@@ -182,3 +182,29 @@ export interface AdsBudget {
   date: string; // YYYY-MM-DD
   createdAt: string;
 }
+
+export interface RestockRecord {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  costPrice: number;
+  totalCost: number;
+  supplier?: string;
+  date: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface WaybillRecord {
+  id: string;
+  trackingNumber: string;
+  courierName: string;
+  destination: string;
+  status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
+  cost: number;
+  date: string;
+  createdAt: string;
+  createdBy: string;
+  notes?: string;
+}

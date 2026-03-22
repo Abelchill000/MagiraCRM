@@ -16,6 +16,7 @@ import AbandonedCarts from './pages/AbandonedCarts.tsx';
 import UserManagement from './pages/UserManagement.tsx';
 import DatabaseExplorer from './pages/DatabaseExplorer.tsx';
 import AdsBudgetPage from './pages/AdsBudget.tsx';
+import AdminRecords from './pages/AdminRecords.tsx';
 import Widgets from './pages/Widgets.tsx';
 import WidgetRenderer from './WidgetRenderer.tsx';
 
@@ -281,6 +282,7 @@ const App: React.FC = () => {
       case 'leads': return <WebLeads userRole={user.role} />;
       case 'abandoned': return <AbandonedCarts userRole={user.role} />;
       case 'adsbudget': return <AdsBudgetPage />;
+      case 'adminrecords': return <AdminRecords />;
       case 'widgets': return <Widgets />;
       case 'users': return <UserManagement />;
       case 'database': return <DatabaseExplorer />;

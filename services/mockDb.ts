@@ -10,7 +10,8 @@ import {
 } from 'firebase/auth';
 import { 
   Product, LogisticsPartner, Order, User, UserRole, 
-  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget, Widget 
+  DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget, Widget,
+  RestockRecord, WaybillRecord
 } from '../types';
 
 const firebaseConfig = {
@@ -40,6 +41,8 @@ class FirebaseDb {
     abandoned: AbandonedCart[];
     budgets: AdsBudget[];
     widgets: Widget[];
+    restocks: RestockRecord[];
+    waybills: WaybillRecord[];
   } = {
     products: [],
     logistics: [],
@@ -49,7 +52,9 @@ class FirebaseDb {
     users: [],
     abandoned: [],
     budgets: [],
-    widgets: []
+    widgets: [],
+    restocks: [],
+    waybills: []
   };
 
   private currentUser: User | null = null;
@@ -96,7 +101,7 @@ class FirebaseDb {
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
-    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets', 'widgets'];
+    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets', 'widgets', 'restocks', 'waybills'];
     
     if (isAdmin) {
       collectionsToSync.push('users');
@@ -242,6 +247,8 @@ class FirebaseDb {
   getAbandonedCarts() { return [...this.data.abandoned]; }
   getBudgets() { return [...this.data.budgets]; }
   getWidgets() { return [...this.data.widgets]; }
+  getRestocks() { return [...this.data.restocks]; }
+  getWaybills() { return [...this.data.waybills]; }
 
   async saveProduct(product: Product) {
     const { id, ...rest } = product;
@@ -304,6 +311,44 @@ class FirebaseDb {
   }
   async deleteWidget(widgetId: string) {
     await deleteDoc(doc(firestore, 'widgets', widgetId));
+  }
+
+  async saveRestock(restock: RestockRecord) {
+    const { id, ...rest } = restock;
+    await setDoc(doc(firestore, 'restocks', id), rest);
+    // Update product stock
+    const product = this.data.products.find(p => p.id === restock.productId);
+    if (product) {
+      await updateDoc(doc(firestore, 'products', product.id), {
+        totalStock: product.totalStock + restock.quantity
+      });
+    }
+  }
+
+  async deleteRestock(restockId: string) {
+    const restock = this.data.restocks.find(r => r.id === restockId);
+    if (restock) {
+      const product = this.data.products.find(p => p.id === restock.productId);
+      if (product) {
+        await updateDoc(doc(firestore, 'products', product.id), {
+          totalStock: Math.max(0, product.totalStock - restock.quantity)
+        });
+      }
+    }
+    await deleteDoc(doc(firestore, 'restocks', restockId));
+  }
+
+  async saveWaybill(waybill: WaybillRecord) {
+    const { id, ...rest } = waybill;
+    await setDoc(doc(firestore, 'waybills', id), rest);
+  }
+
+  async deleteWaybill(waybillId: string) {
+    await deleteDoc(doc(firestore, 'waybills', waybillId));
+  }
+
+  async deleteBudget(budgetId: string) {
+    await deleteDoc(doc(firestore, 'ads_budgets', budgetId));
   }
 
   async getWidgetById(id: string): Promise<Widget | null> {

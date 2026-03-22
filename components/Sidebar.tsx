@@ -58,6 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     { id: 'database', label: 'Database Console', icon: '🔥', roles: [UserRole.ADMIN] },
     { id: 'adsbudget', label: 'Ads Budget', icon: '💰', roles: [UserRole.ADMIN, UserRole.SALES_AGENT, UserRole.INVENTORY_MANAGER, UserRole.LOGISTICS_MANAGER] },
     { id: 'analytics', label: 'Analytics', icon: '📈', roles: [UserRole.ADMIN] },
+    { id: 'adminrecords', label: 'Admin Records', icon: '📒', roles: [UserRole.ADMIN] },
     { id: 'reports', label: 'Agent Reports', icon: '📋', roles: [UserRole.ADMIN] },
   ];
 
