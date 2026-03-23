@@ -55,19 +55,18 @@ const Orders: React.FC<OrdersProps> = ({ user }) => {
   }, []);
 
   const isGlobalAdmin = user.role === UserRole.ADMIN && user.email === 'admin@magiracrm.store';
+  const isPrivilegedUser = isGlobalAdmin || user.email === 'ijasinijafaru@gmail.com' || user.email === 'iconfidence909@gmail.com';
   const isAdmin = user.role === UserRole.ADMIN;
   const isInventoryManager = user.role === UserRole.INVENTORY_MANAGER;
   const isLogisticsManager = user.role === UserRole.LOGISTICS_MANAGER;
-  // ONLY this specific agent gets Admin-level global visibility
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
 
-  const canManageAllOrders = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
-  const canSeeAllOrders = isGlobalAdmin;
+  const canManageAllOrders = isAdmin || isInventoryManager || isLogisticsManager;
+  const canSeeAllOrders = isPrivilegedUser;
 
   const orders = useMemo(() => {
     let filtered = dbOrders;
     
-    // Only Global Admin sees everything
+    // Only Global Admin and privileged users see everything
     if (!canSeeAllOrders) {
       filtered = filtered.filter(o => o.createdBy === user?.name);
     } else if (selectedAgentName !== 'all') {
@@ -273,14 +272,16 @@ YES
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-            Order Management
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+            Orders Terminal
             {canSeeAllOrders && (
-              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">Admin Console</span>
+              <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-blue-200">
+                Network Visibility Active
+              </span>
             )}
           </h1>
           <p className="text-slate-500 text-sm font-medium">
-            {canSeeAllOrders ? 'Global order tracking console.' : 'Tracking orders processed by your sales account.'}
+            {canSeeAllOrders ? 'Global network visibility enabled for this account.' : 'Tracking orders attributed to your sales profile.'}
           </p>
         </div>
         <button 
@@ -389,15 +390,16 @@ YES
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => copyReceiptText(order)}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                          title="Copy Receipt"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                          </svg>
-                        </button>
+                          <button 
+                            onClick={() => setViewingOrder(order)}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                            title="View Details"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
                         <button 
                           onClick={() => shareWhatsApp(order)}
                           className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"

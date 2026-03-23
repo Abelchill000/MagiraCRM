@@ -21,7 +21,7 @@ export const UDO_PACKAGES = [
 ];
 
 export const getPackagePrice = (qty: number, agentName?: string) => {
-  const isUdo = (agentName?.toLowerCase().includes('udo')) || (agentName?.toLowerCase() === 'abelchill000@gmail.com');
+  const isUdo = (agentName?.toLowerCase().includes('udo')) || (agentName?.toLowerCase() === 'admin@magiracrm.store');
   
   const packageList = isUdo ? UDO_PACKAGES : PACKAGES;
   const pkg = packageList.find(p => p.qty === qty);

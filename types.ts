@@ -162,6 +162,13 @@ export interface Widget {
   createdBy: string;
 }
 
+export interface StateConfig {
+  id: string;
+  name: string;
+  whatsappLink: string;
+  isActive: boolean;
+}
+
 export interface User {
   id: string;
   name: string;

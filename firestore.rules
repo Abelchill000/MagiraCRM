@@ -13,7 +13,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-         (request.auth.token.email == "abelchill000@gmail.com" && request.auth.token.email_verified == true));
+         (request.auth.token.email == "admin@magiracrm.store" && request.auth.token.email_verified == true));
     }
     
     function isApproved() {

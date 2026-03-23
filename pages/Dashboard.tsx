@@ -15,19 +15,17 @@ const Dashboard: React.FC = () => {
   const [leads, setLeads] = React.useState(db.getLeads());
   const [budgets, setBudgets] = React.useState(db.getBudgets());
 
-  const isAdmin = user?.role === UserRole.ADMIN;
-  // Special access emails
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
+  const isGlobalAdmin = user?.role === UserRole.ADMIN && user?.email === 'admin@magiracrm.store';
 
   const filteredOrders = useMemo(() => {
-    if (isAdmin || isSuperAgent) return orders;
+    if (isGlobalAdmin) return orders;
     return orders.filter(o => o.createdBy === user?.name);
-  }, [orders, isAdmin, isSuperAgent, user?.name]);
+  }, [orders, isGlobalAdmin, user?.name]);
 
   const filteredLeads = useMemo(() => {
-    if (isAdmin || isSuperAgent) return leads;
+    if (isGlobalAdmin) return leads;
     return leads.filter(l => l.agentName === user?.name);
-  }, [leads, isAdmin, isSuperAgent, user?.name]);
+  }, [leads, isGlobalAdmin, user?.name]);
 
   React.useEffect(() => {
     const unsub = db.subscribe(() => {
@@ -93,7 +91,7 @@ const Dashboard: React.FC = () => {
       o.reminderEnabled
     );
 
-    const filteredBudgets = isAdmin ? budgets : budgets.filter(b => b.userId === user?.id);
+    const filteredBudgets = isGlobalAdmin ? budgets : budgets.filter(b => b.userId === user?.id);
     const adsToday = filteredBudgets.filter(b => b.date === today).reduce((acc, b) => acc + b.amount, 0);
     const totalAdsSpend = filteredBudgets.reduce((acc, b) => acc + b.amount, 0);
 
@@ -113,7 +111,7 @@ const Dashboard: React.FC = () => {
       adsToday,
       totalAdsSpend
     };
-  }, [filteredOrders, filteredLeads, products, budgets, isAdmin, user?.id]);
+  }, [filteredOrders, filteredLeads, products, budgets, isGlobalAdmin, user?.id]);
 
   const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 

@@ -11,7 +11,7 @@ import {
 import { 
   Product, LogisticsPartner, Order, User, UserRole, 
   DeliveryStatus, OrderForm, WebLead, LeadStatus, AbandonedCart, AdsBudget, Widget,
-  RestockRecord, WaybillRecord
+  RestockRecord, WaybillRecord, StateConfig
 } from '../types';
 
 const firebaseConfig = {
@@ -43,6 +43,7 @@ class FirebaseDb {
     widgets: Widget[];
     restocks: RestockRecord[];
     waybills: WaybillRecord[];
+    states: StateConfig[];
   } = {
     products: [],
     logistics: [],
@@ -54,7 +55,8 @@ class FirebaseDb {
     budgets: [],
     widgets: [],
     restocks: [],
-    waybills: []
+    waybills: [],
+    states: []
   };
 
   private currentUser: User | null = null;
@@ -101,7 +103,7 @@ class FirebaseDb {
     if (!this.currentUser || !this.currentUser.isApproved) return;
 
     const isAdmin = this.currentUser.role === UserRole.ADMIN;
-    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets', 'widgets', 'restocks', 'waybills'];
+    const collectionsToSync = ['products', 'logistics', 'orders', 'forms', 'leads', 'abandoned_carts', 'ads_budgets', 'widgets', 'restocks', 'waybills', 'states'];
     
     if (isAdmin) {
       collectionsToSync.push('users');
@@ -249,6 +251,7 @@ class FirebaseDb {
   getWidgets() { return [...this.data.widgets]; }
   getRestocks() { return [...this.data.restocks]; }
   getWaybills() { return [...this.data.waybills]; }
+  getStates() { return [...this.data.states]; }
 
   async saveProduct(product: Product) {
     const { id, ...rest } = product;
@@ -349,6 +352,15 @@ class FirebaseDb {
 
   async deleteBudget(budgetId: string) {
     await deleteDoc(doc(firestore, 'ads_budgets', budgetId));
+  }
+
+  async saveState(state: StateConfig) {
+    const { id, ...rest } = state;
+    await setDoc(doc(firestore, 'states', id), rest);
+  }
+
+  async deleteState(stateId: string) {
+    await deleteDoc(doc(firestore, 'states', stateId));
   }
 
   async getWidgetById(id: string): Promise<Widget | null> {

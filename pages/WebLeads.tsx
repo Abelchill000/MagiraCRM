@@ -37,14 +37,14 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const [agents, setAgents] = useState<User[]>([]);
 
   const isGlobalAdmin = user?.role === UserRole.ADMIN && user?.email === 'admin@magiracrm.store';
+  const isPrivilegedUser = isGlobalAdmin || user?.email === 'ijasinijafaru@gmail.com';
   const isAdmin = userRole === UserRole.ADMIN;
   const isInventoryManager = user?.role === UserRole.INVENTORY_MANAGER;
   const isLogisticsManager = user?.role === UserRole.LOGISTICS_MANAGER;
-  // ONLY this specific agent gets Admin-level global visibility
-  const isSuperAgent = user?.email === 'ijasinijafaru@gmail.com';
   
-  const canManageFulfillment = isAdmin || isSuperAgent || isInventoryManager || isLogisticsManager;
-  const canSeeAllLeads = isGlobalAdmin;
+  const canManageFulfillment = isAdmin || isInventoryManager || isLogisticsManager;
+  const canSeeAllLeads = isPrivilegedUser;
+  const canCopyLeadDetails = isPrivilegedUser;
 
   useEffect(() => {
     setAgents(db.getUsers().filter(u => u.role === UserRole.SALES_AGENT || u.role === UserRole.ADMIN));
@@ -60,7 +60,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
   const sortedLeads = useMemo(() => {
     let filtered = leads;
     
-    // Only Global Admin sees everything
+    // Only Global Admin and privileged users see everything
     if (!canSeeAllLeads) {
       filtered = filtered.filter(l => l.agentName === user?.name);
     } else if (selectedAgentName !== 'all') {
@@ -76,7 +76,7 @@ const WebLeads: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
     }
 
     return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [leads, isAdmin, isSuperAgent, user?.name, searchTerm, selectedAgentName]);
+  }, [leads, isAdmin, user?.name, searchTerm, selectedAgentName]);
 
   const updateStatus = (leadId: string, status: LeadStatus) => {
     db.updateLeadStatus(leadId, status);
@@ -212,15 +212,15 @@ YES
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Console</h1>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Web Leads Terminal</h1>
             {canSeeAllLeads && (
-              <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest border border-emerald-200">
-                Network Access Enabled
+              <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-blue-200">
+                Network Visibility Active
               </span>
             )}
           </div>
           <p className="text-slate-500 text-sm font-medium">
-            {canSeeAllLeads ? 'Network-wide lead capture monitoring.' : 'Tracking leads attributed to your sales profile.'}
+            {canSeeAllLeads ? 'Global network visibility enabled for this account.' : 'Tracking leads attributed to your sales profile.'}
           </p>
         </div>
       </div>
@@ -345,14 +345,26 @@ YES
                             </button>
                           )}
                           <button 
-                            onClick={() => copyLeadDetails(lead)}
+                            onClick={() => setViewingLead(lead)}
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                            title="Copy Details"
+                            title="View Details"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                          </svg>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                           </button>
+                          {canCopyLeadDetails && (
+                            <button 
+                              onClick={() => copyLeadDetails(lead)}
+                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                              title="Copy Details"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                              </svg>
+                            </button>
+                          )}
                           {linkedOrder && linkedOrder.deliveryStatus !== DeliveryStatus.DELIVERED && isGlobalAdmin && (
                             <button 
                               onClick={() => handleMarkDelivered(linkedOrder.id, lead.id)}
